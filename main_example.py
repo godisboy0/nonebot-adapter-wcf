@@ -1,6 +1,8 @@
 import nonebot
 from adapters.wechatferry import Adapter as WechatferryAdapter
 from nonebot.drivers.none import Driver as NoneDriver
+import pathlib as Path
+import os
 
 # 初始化 NoneBot
 nonebot.init(_env_file=".env")
@@ -13,7 +15,8 @@ driver.register_adapter(WechatferryAdapter)
 
 # 在这里加载插件
 nonebot.load_builtin_plugins("echo")  # 内置插件
-nonebot.load_plugin("plugins.test")  # 第三方插件
+print(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'test', 'plugins', "test_plugin"))
+nonebot.load_plugin(Path.Path(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'test', 'plugins', "test_plugin")))  # 第三方插件
 # nonebot.load_plugins("awesome_bot/plugins")  # 本地插件
 
 if __name__ == "__main__":

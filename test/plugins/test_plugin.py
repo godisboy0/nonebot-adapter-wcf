@@ -20,9 +20,9 @@ test = on_command("test", to_me())
 async def handle_test(message: BaseMessage = CommandArg()):
     if message.extract_plain_text() == "pic":
         # 好吧，还是准备按 onebot v11 的格式来写，这样可以使用的插件会多一些。
-        await test.send(message=Message(MessageSegment.image(file="./test-data/玉兰.jpg")))
+        await test.send(message=Message(MessageSegment.image(file="./test/data/玉兰.jpg")))
     elif message.extract_plain_text() == 'music':
-        await test.send(message=Message(MessageSegment.music_custom(url="./test-data/I_love_it.mp3", audio="", title="")))
+        await test.send(message=Message(MessageSegment.music_custom(url="./test/data/I_love_it.mp3", audio="", title="")))
     elif message.extract_plain_text() == 'hello':
         await test.send(message=Message(MessageSegment.text("hello")))
     else:

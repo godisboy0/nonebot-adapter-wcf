@@ -44,4 +44,6 @@ wechatferry 项目带我入了机器人的坑，之后我自己开发了一个�
    ~ git clone git@github.com:godisboy0/nonebot-adapter-wcf.git
    ```
 
-之后，主目录下的 main.py 就是主入口，可以按需修改后运行。注意，wechat的版本需要和wechatferry要求的版本一致，具体可以参照：[wechatferry的文档](https://github.com/lich0821/WeChatFerry)
+之后，主目录下的 main_example.py 就是主入口，可以按需修改后运行。注意，wechat的版本需要和wechatferry要求的版本一致，具体可以参照：[wechatferry的文档](https://github.com/lich0821/WeChatFerry)
+
+不过建议复制出来一个main.py，在这个基础上做修改。这样不受git的管控哈~另外，plugins的开发我放到另外一个暂时私密的repo去了，以后或许会开放出来吧！
