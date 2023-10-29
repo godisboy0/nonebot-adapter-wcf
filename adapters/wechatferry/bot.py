@@ -7,45 +7,9 @@ from nonebot.typing import overrides
 
 from nonebot.adapters import Bot as BaseBot
 
-from .event import Event, TextMessageEvent
+from .event import Event
 from .exception import NotInteractableEventError
 from .message import MessageSegment, Message
-from .utils import logger
-
-
-def _check_at_me(bot: "Bot", event: TextMessageEvent) -> None:
-    """检查消息开头或结尾是否存在 @机器人，去除并赋值 `event.to_me`。
-
-    参数:
-        bot: Bot 对象
-        event: TextMessageEvent 对象
-    """
-    if not isinstance(event, TextMessageEvent):
-        return
-
-    if bot.self_id in event.at_user_list:
-        event.to_me = True
-
-
-def _check_nickname(bot: "Bot", event: TextMessageEvent) -> None:
-    """检查消息开头是否存在昵称，去除并赋值 `event.to_me`。
-
-    参数:
-        bot: Bot 对象
-        event: TextMessageEvent 对象
-    """
-    first_text = event.msg
-    nicknames = set(filter(lambda n: n, bot.config.nickname))
-    if nicknames:
-        # check if the user is calling me with my nickname
-        nickname_regex = "|".join(nicknames)
-        m = re.search(rf"^({nickname_regex})([\s,，]*|$)", first_text, re.IGNORECASE)
-        if m:
-            nickname = m.group(1)
-            logger.debug(f"User is calling me {nickname}")
-            event.to_me = True
-            loc = m.end()
-            event.msg = first_text[loc:]
 
 
 async def send(
@@ -82,11 +46,6 @@ class Bot(BaseBot):
     send_handler: Callable[["Bot", Event, Union[str, MessageSegment]], Any] = send
 
     async def handle_event(self, event: Event) -> None:
-        """处理收到的事件。"""
-        if isinstance(event, TextMessageEvent):
-            _check_at_me(self, event)
-            _check_nickname(self, event)
-
         await nb_handle_event(self, event)
 
     @overrides(BaseBot)

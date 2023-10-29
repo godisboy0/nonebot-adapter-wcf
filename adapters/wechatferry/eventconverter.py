@@ -1,31 +1,14 @@
 from wcferry import Wcf, WxMsg
-from .event import Event
+from .event import Event, PrivateMessageEvent, GroupMessageEvent, MessageEvent, Sender
 from .message import MessageSegment, Message
 from .type import WxType
 from .utils import logger
-from . import event
-import inspect
-from typing import TypeVar, Type
 import re
 from nonebot.utils import escape_tag
 
-
-E = TypeVar("E", bound=Event)
-
-
-known_event_type: dict[str, Type[E]] = {}
-
-for model_name in dir(event):
-    model = getattr(event, model_name)
-    if not inspect.isclass(model) or not issubclass(model, Event):
-        continue
-    wx_raw_type = model.__fields__.get("wx_raw_type")
-    if wx_raw_type is None:
-        logger.warning(
-            f"Event model {escape_tag(model_name)} has no wx_raw_type field.")
-        continue
-    wx_raw_type = wx_raw_type.default
-    known_event_type[wx_raw_type] = model
+"""
+onebot11标准要求：https://github.com/botuniverse/onebot-11/blob/master/README.md
+"""
 
 
 def __get_mention_list(req: WxMsg) -> list[str]:
@@ -44,30 +27,38 @@ def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf = None) -> Event:
     if not msg:
         return None
 
-    args = {
-            "timestamp": msg.ts,
-            "wx_type": msg.type,
-            "from_wxid": msg.sender,
-            "room_wxid": msg.roomid,
-            "to_wxid": msg.roomid if msg.roomid else login_wx_id,
-            "msgid": str(msg.id),
-            "msg": msg.content,
-            "at_user_list": __get_mention_list(msg),
-            "to_me": not msg._is_group or msg.is_at(wcf.wxid),
-            "raw_msg": msg.xml,
-            "data": {}  # 抄的代码还没清楚这块干嘛的，先留着吧……
-        }
+    args = {}
     if msg.type == WxType.WX_MSG_TEXT:
-        args['message'] = Message(MessageSegment.text(msg.content)),
-    elif msg.type == WxType.WX_MSG_PICTURE:
-        # 目前有bug，手动不点击图片的话，微信不会下载大图。。所以当前方法基本是废的
-        args['message'] = Message(MessageSegment.image(file = msg.extra))
-    elif msg.type == WxType.WX_MSG_VIDEO:
-        # 同上。。。
-        args['message'] = Message(MessageSegment.video(file = msg.extra))
-
-    event_type = known_event_type.get(msg.type)
-    if event_type is None:
-        logger.warning(f"Unknown message type: {msg.type}")
+        args['message'] = Message(MessageSegment.text(msg.content))
+    else:
         return None
-    return event_type(**args)
+    if 'original_message' not in args:
+        args['original_message'] = args["message"]
+
+    args.update({
+        "post_type": "message",
+        "time": msg.ts,
+        "wx_type": msg.type,
+        "self_id": login_wx_id,
+        "user_id": msg.sender,
+        "message_id": msg.id,
+        "raw_message": msg.xml,
+        "font": 12,     # meaningless for wechat, but required by onebot 11
+        "sender": Sender(user_id=msg.sender),
+        "to_me": not msg._is_group or msg.is_at(login_wx_id),
+    })
+
+    if msg.roomid:  # 群消息
+        args.update({
+            "message_type": "group",
+            "sub_type": "normal",
+            "group_id": msg.roomid,
+            "at_list": __get_mention_list(msg)
+        })
+        return GroupMessageEvent(**args)
+    else:
+        args.update({
+            "message_type": "private",
+            "sub_type": "friend"
+        })
+        return PrivateMessageEvent(**args)
