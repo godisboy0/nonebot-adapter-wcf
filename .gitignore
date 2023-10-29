@@ -1,6 +1,6 @@
 # plugins 要放在另外一个仓库，啊哈哈
-plugins/**
-plugins
+/plugins/**
+/plugins
 main.py
 
 # Byte-compiled / optimized / DLL files

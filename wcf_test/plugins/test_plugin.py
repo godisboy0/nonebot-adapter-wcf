@@ -4,6 +4,7 @@ from nonebot.rule import to_me
 from nonebot.adapters.onebot.v11 import Message, MessageSegment # 这样的好处是可以兼容很多插件
 from nonebot.params import CommandArg
 from nonebot.adapters import Message as BaseMessage
+
 __plugin_meta__ = PluginMetadata(
     name="test",
     description="测试不同返回消息的格式",

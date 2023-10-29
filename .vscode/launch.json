@@ -8,9 +8,10 @@
             "name": "Python: main",
             "type": "python",
             "request": "launch",
-            "program": "main.py",
+            "program": "main_example.py",
             "console": "integratedTerminal",
-            "justMyCode": false
+            "justMyCode": false,
+            "env": {"PYTHONPATH": "${workspaceFolder}"}
         }
     ]
 }
