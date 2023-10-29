@@ -20,11 +20,16 @@ async def send(
 ) -> Any:
     """默认回复消息处理函数。"""
     try:
-        from_wxid: str = getattr(event, "from_wxid")
-        room_wxid: str = getattr(event, "room_wxid")
+        from_wxid: str = getattr(event, "user_id")
     except AttributeError:
-        raise NotInteractableEventError("该类型事件没有交互对象，无法发送消息！")
+        from_wxid = None
+    try:
+        room_wxid: str = getattr(event, "group_id")
+    except AttributeError:
+        room_wxid = None
     wx_id = from_wxid if not room_wxid else room_wxid
+    if wx_id is None:
+        raise NotInteractableEventError("Event is not interactable")
 
     if isinstance(message, str) or isinstance(message, MessageSegment):
         message = Message(message)
