@@ -1,5 +1,5 @@
 from wcferry import Wcf, WxMsg
-from .event import Event, PrivateMessageEvent, GroupMessageEvent, MessageEvent, Sender
+from .event import Event, PrivateMessageEvent, GroupMessageEvent, Sender
 from .message import MessageSegment, Message
 from .type import WxType
 from .utils import logger
