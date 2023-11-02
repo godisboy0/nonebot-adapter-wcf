@@ -31,7 +31,9 @@ async def send(
     if wx_id is None:
         raise NotInteractableEventError("Event is not interactable")
 
-    if isinstance(message, str) or isinstance(message, MessageSegment):
+    if isinstance(message, str):
+        message = Message(MessageSegment.text(message))
+    elif isinstance(message, MessageSegment):
         message = Message(message)
 
     task = []
@@ -48,7 +50,8 @@ class Bot(BaseBot):
     wechatferry协议适配。
     """
 
-    send_handler: Callable[["Bot", Event, Union[str, MessageSegment]], Any] = send
+    send_handler: Callable[["Bot", Event,
+                            Union[str, MessageSegment]], Any] = send
 
     async def handle_event(self, event: Event) -> None:
         await nb_handle_event(self, event)

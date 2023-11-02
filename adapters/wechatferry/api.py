@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 to_wx_id: 群聊时为群聊id, 非群聊时为用户id
 """
 
+
 class API:
 
     def call_method_by_name(self, method_name, kwargs):
@@ -23,7 +24,7 @@ class API:
             return method(**kwargs)
         else:
             raise ApiNotAvailable()
-        
+
     async def call_api(self, api_name: str, kwargs: dict[str, Any]) -> None:
         """调用api"""
         await asyncio.get_running_loop().run_in_executor(self.executor, self.call_method_by_name, api_name, kwargs)
@@ -36,23 +37,23 @@ class API:
         """发送文本消息"""
         self.wcf.send_text(text, to_wxid)
 
-    def send_image(self, to_wxid: str, file , **kwargs: dict[str, Any]) -> None:
+    def send_image(self, to_wxid: str, file, **kwargs: dict[str, Any]) -> None:
         """发送图片消息"""
-        self.wcf.send_image(path = file, receiver = to_wxid)
+        self.wcf.send_image(path=file, receiver=to_wxid)
 
-    def send_music(self, to_wxid: str,**kwargs) -> None:
+    def send_music(self, to_wxid: str, **kwargs) -> None:
         """发送音乐消息"""
         if kwargs.get("url"):
-            self.wcf.send_file(path = kwargs.get('url'), receiver = to_wxid)
+            self.wcf.send_file(path=kwargs.get('url'), receiver=to_wxid)
 
     def send_video(self, to_wxid: str, file, **kwargs: dict[str, Any]) -> None:
         """发送视频消息"""
-        self.wcf.send_file(path = file, receiver = to_wxid)
+        self.wcf.send_file(path=file, receiver=to_wxid)
 
     def send_file(self, to_wxid: str, file, **kwargs: dict[str, Any]) -> None:
         """发送文件消息"""
-        self.wcf.send_file(path = file, receiver = to_wxid)
+        self.wcf.send_file(path=file, receiver=to_wxid)
 
     def send_record(self, to_wxid: str, file, **kwargs: dict[str, Any]) -> None:
         """发送文件消息"""
-        self.wcf.send_file(path = file, receiver = to_wxid)
+        self.wcf.send_file(path=file, receiver=to_wxid)

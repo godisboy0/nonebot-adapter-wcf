@@ -12,6 +12,7 @@ from nonechat import Frontend, ConsoleSetting
 from nonebot.adapters.console.config import Config
 from nonebot.adapters.console.backend import AdapterConsoleBackend
 from nonebot.adapters.console.event import Event
+from nonechat.message import Text, ConsoleMessage
 
 from adapters.wechatferry.bot import Bot as WechatFerryBot
 from adapters.wechatferry.event import (
@@ -131,4 +132,15 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
 
     @overrides(BaseAdapter)
     async def _call_api(self, bot: WechatFerryBot, api: str, **data: Any) -> None:
-        await self._frontend.call(api, data)
+        ## 目前的api只有3种：send_text, send_image, send_music。统一给改了
+        if api == "send_text":
+            text = data['text']
+            new_data = {"message":ConsoleMessage(Text(text))}
+        elif api == "send_image":
+            file_path = data['file']
+            new_data = {"message":ConsoleMessage(Text(f"[图片] {file_path}"))}
+        elif api == "send_music":
+            url = data['url']
+            new_data = {"message":ConsoleMessage(Text(f"[音乐] {url}"))}
+
+        await self._frontend.call("send_msg", new_data)
