@@ -1,5 +1,6 @@
 import nonebot
 from adapters.wechatferry import Adapter as WechatferryAdapter
+# from wcf_test.test_console_adapter import OneBotV11ConsoleAdapter as WechatferryAdapter # 本地测试用
 from nonebot.drivers.none import Driver as NoneDriver
 
 # 初始化 NoneBot
@@ -15,6 +16,7 @@ driver.register_adapter(WechatferryAdapter)
 # 在这里加载插件
 nonebot.load_builtin_plugins("echo")  # 内置插件
 nonebot.load_plugin("wcf_test.plugins.test_plugin")  # 第三方插件
+# nonebot.load_plugins("plugins")  # 本地插件，测试用。
 # nonebot.load_plugins("awesome_bot/plugins")  # 本地插件
 
 if __name__ == "__main__":
