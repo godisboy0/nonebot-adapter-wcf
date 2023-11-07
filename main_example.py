@@ -3,7 +3,8 @@ from adapters.wechatferry import Adapter as WechatferryAdapter
 from nonebot.drivers.none import Driver as NoneDriver
 
 # 初始化 NoneBot
-nonebot.init(_env_file=".env")
+# nonebot.init(_env_file=".env")
+nonebot.init(driver='~none')
 
 # 注册适配器
 driver = nonebot.get_driver()

@@ -1,6 +1,5 @@
 import sys
 import asyncio
-from nonebot.adapters.console import Adapter as ConsoleAdapter
 from nonebot.adapters import Adapter as BaseAdapter
 
 from typing import Any, Dict, List, Callable, Optional, Awaitable
@@ -16,7 +15,7 @@ from nonechat.message import Text, ConsoleMessage
 
 from adapters.wechatferry.bot import Bot as WechatFerryBot
 from adapters.wechatferry.event import (
-    PrivateMessageEvent as WcfPrivateMsgEvent, 
+    PrivateMessageEvent as WcfPrivateMsgEvent,
     GroupMessageEvent as WcfGroupMsgEvent,
     Sender
 )
@@ -93,23 +92,23 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
 
         if self.group_mode:
             # 此时格式应该为 uid$msg
-            uid, msg = text.split('$')
+            uid, msg_text = text.split('$')
         else:
             uid = event.get_user_id()
-            msg = text
+            msg_text = text
 
         args = {}
         args['message'] = WcfMessage(
-            WcfMessageSeg.text(msg.extract_plain_text()))
+            WcfMessageSeg.text(msg_text))
         args['original_message'] = args["message"]
         args.update({
             "post_type": "message",
-            "time": event.time,
+            "time": event.time.timestamp(),
             "wx_type": 1,
             "self_id": event.self_id,
             "user_id": uid,
-            "message_id": "test_msg_id",
-            "raw_message": msg.xml,
+            "message_id": event.time.timestamp(),
+            "raw_message": "",
             "font": 12,     # meaningless for wechat, but required by onebot 11
             "sender": Sender(user_id=uid),
             "to_me": True,
@@ -121,26 +120,29 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
                 "group_id": msg.roomid,
                 "at_list": []
             })
-            new_event = WcfPrivateMsgEvent(**args)
+            new_event = WcfGroupMsgEvent(**args)
         else:
             args.update({
                 "message_type": "private",
                 "sub_type": "friend",
             })
-            new_event = WcfGroupMsgEvent(**args)
+            new_event = WcfPrivateMsgEvent(**args)
         asyncio.create_task(self.bot.handle_event(new_event))
 
     @overrides(BaseAdapter)
     async def _call_api(self, bot: WechatFerryBot, api: str, **data: Any) -> None:
-        ## 目前的api只有3种：send_text, send_image, send_music。统一给改了
+        # 目前的api只有3种：send_text, send_image, send_music。统一给改了
         if api == "send_text":
             text = data['text']
-            new_data = {"message":ConsoleMessage(Text(text))}
+            new_data = {"user_id": data['to_wxid'],
+                        "message": ConsoleMessage([Text(text)])}
         elif api == "send_image":
             file_path = data['file']
-            new_data = {"message":ConsoleMessage(Text(f"[图片] {file_path}"))}
+            new_data = {"user_id": data['to_wxid'], "message": ConsoleMessage(
+                [Text(f"[图片] {file_path}")])}
         elif api == "send_music":
             url = data['url']
-            new_data = {"message":ConsoleMessage(Text(f"[音乐] {url}"))}
+            new_data = {"user_id": data['to_wxid'], "message": ConsoleMessage(
+                [Text(f"[音乐] {url}")])}
 
         await self._frontend.call("send_msg", new_data)
