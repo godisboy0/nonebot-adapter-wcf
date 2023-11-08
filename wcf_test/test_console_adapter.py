@@ -27,7 +27,7 @@ BOT_ID = "wechatferry_console"
 一个简单的想法，把从bot中接收到的onebot格式的消息转换成console格式的消息
 这样可以方便地在控制台中测试bot的功能
 """
-
+last_group_speaker = None
 
 class OneBotV11ConsoleAdapter(BaseAdapter):
     @overrides(BaseAdapter)
@@ -83,16 +83,26 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
         if text.strip() == "_gc_":
             # 模拟群组消息。
             self.group_mode = True
-            self._call_api(self.bot, "send_msg",
-                           message="群组模式。输入uid$msg发送消息。_qgc_退出")
+            asyncio.create_task(self._call_api(self.bot, "send_text",
+                           text="群组模式。输入uid$msg发送消息。_qgc_退出", to_wxid=event.get_user_id()))
             return
         elif text.strip() == "_qgc_":
             self.group_mode = False
-            self._call_api(self.bot, "send_msg", message="退出群组模式。")
+            asyncio.create_task(self._call_api(self.bot, "send_text", text="退出群组模式。", to_wxid=event.get_user_id()))
 
         if self.group_mode:
+            global last_group_speaker
             # 此时格式应该为 uid$msg
-            uid, msg_text = text.split('$')
+            if '$' not in text and not last_group_speaker:
+                asyncio.create_task(self._call_api(self.bot, "send_text", text="输入uid$msg发送消息", to_wxid=event.get_user_id()))
+                return
+            elif '$' not in text and last_group_speaker:
+                asyncio.create_task(self._call_api(self.bot, "send_text", text=f"以{last_group_speaker}发言", to_wxid=event.get_user_id()))
+                uid = last_group_speaker
+                msg_text = text
+            else:
+                uid, msg_text = text.split('$')
+                last_group_speaker = uid
         else:
             uid = event.get_user_id()
             msg_text = text
@@ -117,7 +127,7 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
             args.update({
                 "message_type": "group",
                 "sub_type": "normal",
-                "group_id": msg.roomid,
+                "group_id": "console_group",
                 "at_list": []
             })
             new_event = WcfGroupMsgEvent(**args)
