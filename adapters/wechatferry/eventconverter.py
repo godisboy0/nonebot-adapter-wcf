@@ -32,8 +32,7 @@ def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf = None) -> Event:
         args['message'] = Message(MessageSegment.text(msg.content))
     else:
         return None
-    if 'original_message' not in args:
-        args['original_message'] = args["message"]
+    args['original_message'] = args["message"]
 
     args.update({
         "post_type": "message",
@@ -45,15 +44,19 @@ def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf = None) -> Event:
         "raw_message": msg.xml,
         "font": 12,     # meaningless for wechat, but required by onebot 11
         "sender": Sender(user_id=msg.sender),
-        "to_me": not msg._is_group or msg.is_at(login_wx_id),
+        "to_me": (not msg._is_group) or msg.is_at(login_wx_id),
     })
 
     if msg.roomid:  # 群消息
+        at_users = __get_mention_list(msg)
+        args['message'] = [MessageSegment.at(
+            user_id) for user_id in at_users] + args['message']
+        args['original_message'] = args["message"]
         args.update({
             "message_type": "group",
             "sub_type": "normal",
             "group_id": msg.roomid,
-            "at_list": __get_mention_list(msg)
+            "at_list": at_users
         })
         return GroupMessageEvent(**args)
     else:

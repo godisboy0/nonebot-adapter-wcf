@@ -89,9 +89,12 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
         elif text.strip() == "_qgc_":
             self.group_mode = False
             asyncio.create_task(self._call_api(self.bot, "send_text", text="退出群组模式。", to_wxid=event.get_user_id()))
-
+        at_users = []
         if self.group_mode:
             global last_group_speaker
+            if '@' in text:
+                # @符号以后的都认为是另一个用户名
+                at_users = [x for x in text.split('@')[1:] if x]
             # 此时格式应该为 uid$msg
             if '$' not in text and not last_group_speaker:
                 asyncio.create_task(self._call_api(self.bot, "send_text", text="输入uid$msg发送消息", to_wxid=event.get_user_id()))
@@ -110,6 +113,9 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
         args = {}
         args['message'] = WcfMessage(
             WcfMessageSeg.text(msg_text))
+        if at_users:
+            args['message'] = [WcfMessageSeg.at(
+                user_id) for user_id in at_users] + args['message']
         args['original_message'] = args["message"]
         args.update({
             "post_type": "message",
