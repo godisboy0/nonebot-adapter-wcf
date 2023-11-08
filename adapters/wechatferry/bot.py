@@ -37,6 +37,29 @@ async def send(
         message = Message(message)
 
     task = []
+    # 根据onebot 11 的标准，at行为是一个单独的segement，所以这里需要将at的内容拆分出来。(多个at就是多个segment)
+    # 这里直接将at拼到所有的text segement 里面，然后删除at这个segement。
+    # 如果没有 text segement，那就将at转化为一个单独的text segement。
+    at_segs = []
+    for seg in message:
+        if seg.type == "at":
+            at_segs.append(seg)
+
+    if at_segs:
+        text_segs: list[MessageSegment] = []
+        for seg in message:
+            if seg.type == "text":
+                text_segs.append(seg)
+        if not text_segs:
+            text_segs.append(MessageSegment.text(""))
+        
+        aters = [at_seg.data['qq'] for at_seg in at_segs]
+        for seg in text_segs:
+            seg.data["text"] = f"{' '.join(['@'+ x for x in aters])} {seg.data['text']}"
+            seg.data['aters'] = aters
+        for at_seg in at_segs:
+            message.remove(at_seg)
+
     for segment in message:
         api = f"send_{segment.type}"
         segment.data["to_wxid"] = wx_id

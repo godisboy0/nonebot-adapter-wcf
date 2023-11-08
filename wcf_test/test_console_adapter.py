@@ -59,8 +59,8 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
         self._frontend = Frontend(
             AdapterConsoleBackend,
             ConsoleSetting(
-                title="Nonebot",
-                sub_title="welcome to Console",
+                title="onebot11-adapter-console",
+                sub_title="welcome using for test",
                 toolbar_exit="❌",
                 toolbar_back="⬅",
                 icon_color=Color.parse("#EA5252"),
