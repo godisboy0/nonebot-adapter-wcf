@@ -49,8 +49,8 @@ def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf = None) -> Event:
 
     if msg.roomid:  # 群消息
         at_users = __get_mention_list(msg)
-        args['message'] = [MessageSegment.at(
-            user_id) for user_id in at_users] + args['message']
+        args['message'] = args['message'] + [MessageSegment.at(
+            user_id) for user_id in at_users]
         args['original_message'] = args["message"]
         args.update({
             "message_type": "group",
