@@ -1,7 +1,7 @@
 from nonebot.plugin import PluginMetadata
 from nonebot import on_command
 from nonebot.rule import to_me
-from nonebot.adapters.onebot.v11 import Message, MessageSegment # 这样的好处是可以兼容很多插件
+from nonebot.adapters.onebot.v11 import Message, MessageSegment  # 这样的好处是可以兼容很多插件
 from nonebot.params import CommandArg
 from nonebot.adapters import Message as BaseMessage
 
@@ -23,9 +23,9 @@ async def handle_test(message: BaseMessage = CommandArg()):
         # 好吧，还是准备按 onebot v11 的格式来写，这样可以使用的插件会多一些。
         await test.send(message=Message(MessageSegment.image(file="./wcf_test/data/玉兰.jpg")))
     elif message.extract_plain_text() == 'music':
-        await test.send(message=Message(MessageSegment.music_custom(url="./wcf_test/data/I_love_it.mp3", audio="", title="")))
+        # 当前还不能发送xml卡片= =
+        await test.send(message=Message(MessageSegment.music_custom(url="不会被解析", audio="./wcf_test/data/I_love_it.mp3", title="不会被解析")))
     elif message.extract_plain_text() == 'hello':
         await test.send(message=Message(MessageSegment.text("hello")))
     else:
         await test.send(message=message)
-

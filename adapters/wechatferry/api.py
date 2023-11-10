@@ -46,8 +46,8 @@ class API:
 
     def send_music(self, to_wxid: str, **kwargs) -> None:
         """发送音乐消息"""
-        if kwargs.get("url"):
-            self.wcf.send_file(path=kwargs.get('url'), receiver=to_wxid)
+        if kwargs.get("audio"):
+            self.wcf.send_file(path=kwargs.get('audio'), receiver=to_wxid)
 
     def send_video(self, to_wxid: str, file, **kwargs: dict[str, Any]) -> None:
         """发送视频消息"""

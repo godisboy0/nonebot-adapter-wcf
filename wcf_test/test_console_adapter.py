@@ -158,8 +158,8 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
             new_data = {"user_id": data['to_wxid'], "message": ConsoleMessage(
                 [Text(f"[图片] {file_path}")])}
         elif api == "send_music":
-            url = data['url']
+            file_path = data['audio']
             new_data = {"user_id": data['to_wxid'], "message": ConsoleMessage(
-                [Text(f"[音乐] {url}")])}
+                [Text(f"[音乐] {file_path}")])}
 
         await self._frontend.call("send_msg", new_data)
