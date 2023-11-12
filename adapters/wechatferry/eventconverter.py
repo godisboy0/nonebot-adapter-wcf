@@ -31,6 +31,7 @@ def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf = None) -> Event:
     if msg.type == WxType.WX_MSG_TEXT:
         content = re.sub(r'@.*?\u2005', '', msg.content).strip()
         content = re.sub(r'@.*? ', '', content).strip()
+        content = re.sub(r'@.*?$', '', content).strip()
         args['message'] = Message(MessageSegment.text(content))
     else:
         return None
