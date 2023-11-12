@@ -51,7 +51,9 @@ async def send(
             if seg.type == "text":
                 text_segs.append(seg)
         if not text_segs:
-            text_segs.append(MessageSegment.text(""))
+            a_msg_seg = MessageSegment.text("")
+            message = Message(a_msg_seg) + message
+            text_segs.append(a_msg_seg)
         
         aters = [at_seg.data['qq'] for at_seg in at_segs]
         for seg in text_segs:

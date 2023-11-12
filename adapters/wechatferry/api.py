@@ -36,7 +36,7 @@ class API:
     def send_text(self, to_wxid: str, text, **kwargs: dict[str, Any]) -> None:
         """发送文本消息"""
         if kwargs.get('aters'):
-            self.wcf.send_text(text, to_wxid, aters=kwargs.get('aters'))
+            self.wcf.send_text(text, to_wxid, aters=",".join(kwargs.get('aters')))
         else:
             self.wcf.send_text(text, to_wxid)
 
