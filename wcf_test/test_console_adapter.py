@@ -89,6 +89,7 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
         elif text.strip() == "_qgc_":
             self.group_mode = False
             asyncio.create_task(self._call_api(self.bot, "send_text", text="退出群组模式。", to_wxid=event.get_user_id()))
+            return
         at_users = []
         if self.group_mode:
             global last_group_speaker

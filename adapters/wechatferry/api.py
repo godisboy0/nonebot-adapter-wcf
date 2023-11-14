@@ -7,7 +7,8 @@ from typing import Any
 from .exception import ApiNotAvailable
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-
+from basemodel import UserInfo
+from typing import Optional
 
 """
 发现绝大多数插件都是为 onebot.v11 所写，为了更好的复用（白嫖），这里也用 onebot.v11 中相关的数据结构。
@@ -60,3 +61,7 @@ class API:
     def send_record(self, to_wxid: str, file, **kwargs: dict[str, Any]) -> None:
         """发送文件消息"""
         self.wcf.send_file(path=file, receiver=to_wxid)
+
+    def query_user_info(self, user_id: str, **kwargs: dict[str, Any]) -> Optional[UserInfo]:
+        """查询用户信息"""
+        return self.wcf.get_user_info(user_id)
