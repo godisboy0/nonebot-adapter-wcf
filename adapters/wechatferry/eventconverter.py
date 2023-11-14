@@ -58,8 +58,7 @@ def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf = None) -> Event:
         args.update({
             "message_type": "group",
             "sub_type": "normal",
-            "group_id": msg.roomid,
-            "at_list": at_users
+            "group_id": msg.roomid
         })
         return GroupMessageEvent(**args)
     else:

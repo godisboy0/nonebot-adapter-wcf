@@ -19,7 +19,6 @@ class GroupMessageEvent (OnebotGroupMessageEvent):
     user_id: str # 微信的用户 ID
     group_id: str # 微信的群组 ID
     wx_type : int # 微信的消息类型，详见 type.py
-    at_list : list[str] # @的用户列表
 
 __all__ = [
     "Event",

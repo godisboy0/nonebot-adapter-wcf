@@ -134,8 +134,7 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
             args.update({
                 "message_type": "group",
                 "sub_type": "normal",
-                "group_id": "console_group",
-                "at_list": []
+                "group_id": "console_group"
             })
             new_event = WcfGroupMsgEvent(**args)
         else:
