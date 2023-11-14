@@ -7,7 +7,7 @@ from typing import Any
 from .exception import ApiNotAvailable
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from basemodel import UserInfo
+from .basemodel import UserInfo
 from typing import Optional
 
 """
