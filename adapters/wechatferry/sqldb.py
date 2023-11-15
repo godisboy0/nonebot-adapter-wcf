@@ -13,7 +13,7 @@ class database:
     def __init__(self, file_path, db_name="wcf") -> None:
         ## 如果同参数
         if file_path in database.singleton_dict:
-            self.conn = database.singleton_dict[file_path].conn
+            self.conn = database.singleton_dict[file_path]
             return
         
         if not file_path:
