@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class database:
 
-    conn_dict: dict[str, Connection]= {}
+    singleton_dict: dict[str, Connection]= {}
 
     def __init__(self, file_path, db_name="wcf") -> None:
         ## 如果同参数
