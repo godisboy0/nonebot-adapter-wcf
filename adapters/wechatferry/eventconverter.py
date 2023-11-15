@@ -5,11 +5,12 @@ from .type import WxType
 from .utils import logger
 import re
 from nonebot.utils import escape_tag
+import xml.etree.ElementTree as ET
+from typing import Optional
 
 """
 onebot11标准要求：https://github.com/botuniverse/onebot-11/blob/master/README.md
 """
-
 
 def __get_mention_list(req: WxMsg) -> list[str]:
     if req.xml is not None:
@@ -33,6 +34,13 @@ def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf = None) -> Event:
         content = re.sub(r'@.*? ', '', content).strip()
         content = re.sub(r'@.*?$', '', content).strip()
         args['message'] = Message(MessageSegment.text(content))
+    elif msg.type == WxType.WX_MSG_REVOKE:
+        content = try_get_revoke_msg(msg.content)
+        if content:
+            args['message'] = Message(MessageSegment('revoke', {'revoke_msg_id': content}))
+        else:
+            return None
+
     else:
         return None
     args['original_message'] = args["message"]
@@ -67,3 +75,16 @@ def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf = None) -> Event:
             "sub_type": "friend"
         })
         return PrivateMessageEvent(**args)
+
+def try_get_revoke_msg(content: str) -> Optional[str]:
+    try:
+        root = ET.fromstring(content)
+    except ET.ParseError:
+        return None
+    
+    msg_sub_type = root.attrib.get('type')
+    if msg_sub_type != 'revokemsg':
+        return None
+    
+    newmsgid_element = root.find('revokemsg/newmsgid')
+    return newmsgid_element.text if newmsgid_element is not None else None
