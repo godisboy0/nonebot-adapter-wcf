@@ -21,42 +21,6 @@ from .utils import logger
 from .api import API
 from .sqldb import database
 
-adapter_config = AdapterConfig.parse_obj(get_driver().config)
-
-DB = database(adapter_config.db_path)
-if not DB.table_exists("msg"):
-    DB.create_table(
-        'create table msg ( \
-            id integer primary key autoincrement, \
-            room_id text, \
-            user_id text, \
-            msg_text text, \
-            msg_type text, \
-            at_users text, \
-            msg_id text, \
-            raw_msg text, \
-            msg_time text \
-        )'
-    )
-
-if not DB.table_exists("raw_msg"):
-    DB.create_table(
-        'create table raw_msg ( \
-            id integer primary key autoincrement, \
-            msg_id text, \
-            msg_type text, \
-            msg_time text, \
-            msg_sign text, \
-            msg_xml text, \
-            msg_sender text, \
-            msg_roomid text, \
-            msg_content text, \
-            msg_thumb text, \
-            msg_extra text \
-        )'
-    )
-
-
 rsv_executor = ThreadPoolExecutor(max_workers=1)
 
 
@@ -67,6 +31,9 @@ class Adapter(BaseAdapter):
         super().__init__(driver, **kwargs)
         self.driver.on_startup(self._setup)
         self.driver.on_shutdown(self._shutdown)
+        self.adapter_config = AdapterConfig.parse_obj(get_driver().config)
+
+        self.db = self.init_db()
 
     async def _shutdown(self) -> None:
         self.bot_disconnect(self.bot)
@@ -78,7 +45,7 @@ class Adapter(BaseAdapter):
 
     async def _setup(self) -> None:
         try:
-            self.wcf = Wcf(debug=adapter_config.debug)
+            self.wcf = Wcf(debug=self.adapter_config.debug)
             self.login_bot_id = self.wcf.get_user_info()['wxid']
             self.bot = Bot(adapter=self, self_id=self.login_bot_id)
             self.wcf.enable_receiving_msg()
@@ -99,10 +66,10 @@ class Adapter(BaseAdapter):
                     f"Received message from wcf: {escape_tag(str(msg))}")
                 event = self.wcf_msg_to_event(msg)
                 if event:
-                    await record_msg(event)
+                    await self.record_msg(event)
                     asyncio.create_task(self.bot.handle_event(event))
                 else:
-                    await record_raw_msg(msg)
+                    await self.record_raw_msg(msg)
             except Empty:
                 continue  # Empty message
             except Exception as e:
@@ -145,44 +112,79 @@ class Adapter(BaseAdapter):
                 pass
             f.write(json.dumps(d, ensure_ascii=False, indent=2) + "\n")
 
+    def init_db(self):
+        DB = database(self.adapter_config.db_path)
+        if not DB.table_exists("msg"):
+            DB.create_table(
+                'create table msg ( \
+                    id integer primary key autoincrement, \
+                    room_id text, \
+                    user_id text, \
+                    msg_text text, \
+                    msg_type text, \
+                    at_users text, \
+                    msg_id text, \
+                    raw_msg text, \
+                    msg_time text \
+                )'
+            )
 
-async def record_msg(event: Event):
-    try:
-        room_id = str(event.group_id) if isinstance(
-            event, GroupMessageEvent) else None
-        user_id = str(event.user_id)
-        msg_text = event.message.extract_plain_text()
-        msg_type = ",".join([seg.type for seg in event.message])
-        at_users = ",".join([seg.data["qq"]
-                            for seg in event.message if seg.type == "at"])
-        msg_id = event.message_id
-        msg_time = event.time
-        raw_msg = str(event.raw_message)
-
-        DB.insert(
-            'insert into msg (room_id, user_id, msg_text, msg_type, at_users, msg_id, raw_msg, msg_time) values (?, ?, ?, ?, ?, ?, ?, ?)',
-            room_id, user_id, msg_text, msg_type, at_users, msg_id, raw_msg, msg_time
-        )
-    except Exception as e:
-        logger.error("Record message error:", e)
+        if not DB.table_exists("raw_msg"):
+            DB.create_table(
+                'create table raw_msg ( \
+                    id integer primary key autoincrement, \
+                    msg_id text, \
+                    msg_type text, \
+                    msg_time text, \
+                    msg_sign text, \
+                    msg_xml text, \
+                    msg_sender text, \
+                    msg_roomid text, \
+                    msg_content text, \
+                    msg_thumb text, \
+                    msg_extra text \
+                )'
+            )
+        return DB
 
 
-async def record_raw_msg(msg: WxMsg):
-    try:
-        msg_id = msg.id
-        msg_type = msg.type
-        msg_time = msg.ts
-        msg_sign = msg.sign
-        msg_xml = msg.xml
-        msg_sender = msg.sender
-        msg_roomid = msg.roomid
-        msg_content = msg.content
-        msg_thumb = msg.thumb
-        msg_extra = msg.extra
+    async def record_msg(self, event: Event):
+        try:
+            room_id = str(event.group_id) if isinstance(
+                event, GroupMessageEvent) else None
+            user_id = str(event.user_id)
+            msg_text = event.message.extract_plain_text()
+            msg_type = ",".join([seg.type for seg in event.message])
+            at_users = ",".join([seg.data["qq"]
+                                for seg in event.message if seg.type == "at"])
+            msg_id = event.message_id
+            msg_time = event.time
+            raw_msg = str(event.raw_message)
 
-        DB.insert(
-            'insert into raw_msg (msg_id, msg_type, msg_time, msg_sign, msg_xml, msg_sender, msg_roomid, msg_content, msg_thumb, msg_extra) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            msg_id, msg_type, msg_time, msg_sign, msg_xml, msg_sender, msg_roomid, msg_content, msg_thumb, msg_extra
-        )
-    except Exception as e:
-        logger.error("Record raw message error:", e)
+            self.db.insert(
+                'insert into msg (room_id, user_id, msg_text, msg_type, at_users, msg_id, raw_msg, msg_time) values (?, ?, ?, ?, ?, ?, ?, ?)',
+                room_id, user_id, msg_text, msg_type, at_users, msg_id, raw_msg, msg_time
+            )
+        except Exception as e:
+            logger.error("Record message error:", e)
+
+
+    async def record_raw_msg(self, msg: WxMsg):
+        try:
+            msg_id = msg.id
+            msg_type = msg.type
+            msg_time = msg.ts
+            msg_sign = msg.sign
+            msg_xml = msg.xml
+            msg_sender = msg.sender
+            msg_roomid = msg.roomid
+            msg_content = msg.content
+            msg_thumb = msg.thumb
+            msg_extra = msg.extra
+
+            self.db.insert(
+                'insert into raw_msg (msg_id, msg_type, msg_time, msg_sign, msg_xml, msg_sender, msg_roomid, msg_content, msg_thumb, msg_extra) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                msg_id, msg_type, msg_time, msg_sign, msg_xml, msg_sender, msg_roomid, msg_content, msg_thumb, msg_extra
+            )
+        except Exception as e:
+            logger.error("Record raw message error:", e)
