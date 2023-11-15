@@ -56,7 +56,7 @@ async def send(
             text_segs.append(a_msg_seg)
 
         aters = [at_seg.data['qq'] for at_seg in at_segs]
-        at_str = " ".join([f'@{await bot.get_user_alias(x, from_wxid, room_wxid)}' for x in aters])
+        at_str = " ".join([f'@{await bot.get_user_alias(x, room_wxid)}' for x in aters])
         for seg in text_segs:
             seg.data["text"] = f"{at_str} {seg.data['text']}"
             seg.data['aters'] = aters
