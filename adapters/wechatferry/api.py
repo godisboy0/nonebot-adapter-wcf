@@ -29,7 +29,7 @@ class API:
 
     async def call_api(self, api_name: str, kwargs: dict[str, Any]) -> None:
         """调用api"""
-        await asyncio.get_running_loop().run_in_executor(self.executor, self.call_method_by_name, api_name, kwargs)
+        return await asyncio.get_running_loop().run_in_executor(self.executor, self.call_method_by_name, api_name, kwargs)
 
     def __init__(self, wcf: Wcf):
         self.wcf = wcf

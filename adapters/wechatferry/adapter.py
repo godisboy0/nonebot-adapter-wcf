@@ -92,7 +92,7 @@ class Adapter(BaseAdapter):
         logger.debug(
             f"Calling API {escape_tag(api)} with data: {escape_tag(str(data))}")
         try:
-            await self.api.call_api(api, data)
+            return await self.api.call_api(api, data)
         except Exception as e:
             logger.error(f"Calling API {escape_tag(api)} failed: {e}")
             self.record_failed_api(api, data)
