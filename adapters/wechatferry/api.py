@@ -77,4 +77,4 @@ class API:
     
     def get_alias_in_chatroom(self, group_id: str, user_id: str, **kwargs: dict[str, Any]) -> str:
         """查询群成员昵称"""
-        return self.wcf.get_alias_in_chatroom(group_id, user_id) or user_id
+        return self.wcf.get_alias_in_chatroom(user_id, group_id) or user_id
