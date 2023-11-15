@@ -64,4 +64,4 @@ class API:
 
     def query_user_info(self, user_id: str, **kwargs: dict[str, Any]) -> Optional[UserInfo]:
         """查询用户信息"""
-        return self.wcf.get_user_info(user_id)
+        return self.wcf.get_user_info()
