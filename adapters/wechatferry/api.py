@@ -16,6 +16,7 @@ from typing import Optional
 to_wx_id: 群聊时为群聊id, 非群聊时为用户id
 """
 
+user_cache = {}
 
 class API:
 
@@ -62,6 +63,18 @@ class API:
         """发送文件消息"""
         self.wcf.send_file(path=file, receiver=to_wxid)
 
-    def query_user_info(self, user_id: str, **kwargs: dict[str, Any]) -> Optional[UserInfo]:
+    def get_user_info(self, user_id: str, **kwargs: dict[str, Any]) -> Optional[UserInfo]:
         """查询用户信息"""
-        return self.wcf.get_user_info()
+        if not user_id:
+            return None
+        
+        global user_cache
+        if kwargs.get('refresh') or user_id not in user_cache:
+            user_cache = {}
+            for user in self.wcf.get_user_list():
+                user_cache[user['wxid']] = user
+        return user_cache.get(user_id)
+    
+    def get_alias_in_chatroom(self, group_id: str, user_id: str, **kwargs: dict[str, Any]) -> str:
+        """查询群成员昵称"""
+        return self.wcf.get_alias_in_chatroom(group_id, user_id) or user_id

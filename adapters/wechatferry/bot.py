@@ -1,6 +1,6 @@
 import asyncio
-import re
 from typing import Any, Callable, Union
+from .basemodel import UserInfo
 
 from nonebot.message import handle_event as nb_handle_event
 from nonebot.typing import overrides
@@ -54,10 +54,11 @@ async def send(
             a_msg_seg = MessageSegment.text("")
             message = Message(a_msg_seg) + message
             text_segs.append(a_msg_seg)
-        
+
         aters = [at_seg.data['qq'] for at_seg in at_segs]
+        at_str = " ".join([f'@{await bot.get_user_alias(x, from_wxid, room_wxid)}' for x in aters])
         for seg in text_segs:
-            seg.data["text"] = f"{' '.join(['@'+ x for x in aters])} {seg.data['text']}"
+            seg.data["text"] = f"{at_str} {seg.data['text']}"
             seg.data['aters'] = aters
         for at_seg in at_segs:
             message.remove(at_seg)
@@ -80,6 +81,14 @@ class Bot(BaseBot):
 
     async def handle_event(self, event: Event) -> None:
         await nb_handle_event(self, event)
+
+    async def get_user_alias(self, user_id: str, room_id=None) -> str:
+        """获取用户昵称，如果是群聊，那么会返回群昵称，如果是私聊，那么会返回用户名。找不到就返回user_id"""
+        if room_id:
+            return await self.call_api("get_alias_in_chatroom", group_id=room_id, user_id=user_id)
+        else:
+            user_info: UserInfo = await self.call_api("get_user_info", user_id=user_id)
+            return user_info.wx_name if user_info else user_id
 
     @overrides(BaseBot)
     async def send(
