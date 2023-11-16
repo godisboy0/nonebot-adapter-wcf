@@ -72,7 +72,8 @@ class API:
         if kwargs.get('refresh') or user_id not in user_cache:
             user_cache = {}
             for user in self.wcf.get_contacts():
-                user_cache[user['wxid']] = user
+                if user.get('wxid'):
+                    user_cache[user['wxid']] = user
         return user_cache.get(user_id)
     
     def get_alias_in_chatroom(self, group_id: str, user_id: str, **kwargs: dict[str, Any]) -> str:
