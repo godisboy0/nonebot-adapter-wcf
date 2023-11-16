@@ -102,15 +102,11 @@ class WxType(IntEnum):
     WX_MSG_LOCATION = 48
     """位置"""
     WX_MSG_APP = 49
-    """应用类型"""
+    """应用类型，这也是个复杂的类型，类似发送链接，发送小程序，引用消息。都是这个type，需要内部拆分。"""
     WX_MSG_SYSTEM = 10000
     """系统消息"""
     WX_MSG_REVOKE = 10002
     """撤回消息，准确的说，这是‘系统消息’，撤回是其中之一"""
-
-    # 以下是从wechatferry相关代码中新加的
-    WX_MSG_FILE = 49  # "49": "共享实时位置、文件、转账、链接",   # "1090519089": "文件"
-    """文件"""
     
 
 class SubType(IntEnum):
