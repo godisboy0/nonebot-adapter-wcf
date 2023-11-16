@@ -128,6 +128,11 @@ class Adapter(BaseAdapter):
                     msg_time text \
                 )'
             )
+            # 搞几个索引，方便以后查询。
+            DB.execute('CREATE INDEX IF NOT EXISTS index_room_id ON msg (room_id)')
+            DB.execute('CREATE INDEX IF NOT EXISTS index_user_id ON msg (user_id)')
+            DB.execute('CREATE INDEX IF NOT EXISTS index_msg_id ON msg (msg_id)')
+            DB.execute('CREATE INDEX IF NOT EXISTS index_msg_time ON msg (msg_time)')
 
         if not DB.table_exists("raw_msg"):
             DB.create_table(
@@ -145,6 +150,7 @@ class Adapter(BaseAdapter):
                     msg_extra text \
                 )'
             )
+            # 这个表只是为了记录还未转的信息，为了方便以后分析。所以先不加索引了。
         return DB
 
 
@@ -170,6 +176,9 @@ class Adapter(BaseAdapter):
 
 
     async def record_raw_msg(self, msg: WxMsg):
+        if not msg or str(msg.type) == "51":
+            # 51是量大又没意义的系统信息，感觉类似心跳包，不记录了。
+            return
         try:
             msg_id = msg.id
             msg_type = msg.type
