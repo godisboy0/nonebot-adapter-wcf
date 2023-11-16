@@ -47,6 +47,17 @@ class database:
         finally:
             cursor.close()
 
+    def execute(self, sql: str, *args) -> None:
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(sql, args)
+            self.conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to execute: {e}")
+            raise e
+        finally:
+            cursor.close()
+
     def insert(self, sql: str, *args) -> None:
         cursor = self.conn.cursor()
         try:
