@@ -90,6 +90,10 @@ class Bot(BaseBot):
             user_info: UserInfo = await self.call_api("get_user_info", user_id=user_id)
             return user_info.wx_name if user_info else user_id
 
+    async def get_user_info(self, user_id: str) -> UserInfo:
+        """获取用户信息"""
+        return await self.call_api("get_user_info", user_id=user_id)
+
     @overrides(BaseBot)
     async def send(
         self,

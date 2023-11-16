@@ -20,6 +20,7 @@ from adapters.wechatferry.event import (
     Sender
 )
 from adapters.wechatferry.message import MessageSegment as WcfMessageSeg, Message as WcfMessage
+from adapters.wechatferry.basemodel import UserInfo as WcfUserInfo
 
 BOT_ID = "wechatferry_console"
 
@@ -147,7 +148,7 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
         asyncio.create_task(self.bot.handle_event(new_event))
 
     @overrides(BaseAdapter)
-    async def _call_api(self, bot: WechatFerryBot, api: str, **data: Any) -> None:
+    async def _call_api(self, bot: WechatFerryBot, api: str, **data: Any) -> Any:
         # 目前的api只有3种：send_text, send_image, send_music。统一给改了
         if api == "send_text":
             text = data['text']
@@ -161,5 +162,10 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
             file_path = data['audio']
             new_data = {"user_id": data['to_wxid'], "message": ConsoleMessage(
                 [Text(f"[音乐] {file_path}")])}
+        elif api == "get_user_info":
+            user_id = data['user_id']
+            return WcfUserInfo(wx_id=user_id, code=user_id, wx_name=user_id, gender="😝")
+        elif api == "get_alias_in_chatroom":
+            return data['user_id']
 
         await self._frontend.call("send_msg", new_data)
