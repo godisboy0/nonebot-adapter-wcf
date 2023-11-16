@@ -18,6 +18,7 @@ to_wx_id: 群聊时为群聊id, 非群聊时为用户id
 
 user_cache = {}
 
+
 class API:
 
     def call_method_by_name(self, method_name, kwargs):
@@ -38,7 +39,8 @@ class API:
     def send_text(self, to_wxid: str, text, **kwargs: dict[str, Any]) -> None:
         """发送文本消息"""
         if kwargs.get('aters'):
-            self.wcf.send_text(text, to_wxid, aters=",".join(kwargs.get('aters')))
+            self.wcf.send_text(
+                text, to_wxid, aters=",".join(kwargs.get('aters')))
         else:
             self.wcf.send_text(text, to_wxid)
 
@@ -63,19 +65,24 @@ class API:
         """发送文件消息"""
         self.wcf.send_file(path=file, receiver=to_wxid)
 
-    def get_user_info(self, user_id: str, **kwargs: dict[str, Any]) -> Optional[UserInfo]:
+    def get_user_info(self, user_id: str, **kwargs: dict[str, Any]) -> UserInfo:
         """查询用户信息"""
         if not user_id:
-            return None
-        
+            return UserInfo("", "", "", "")
+
         global user_cache
         if kwargs.get('refresh') or user_id not in user_cache:
             user_cache = {}
             for user in self.wcf.get_contacts():
                 if user.get('wxid'):
-                    user_cache[user['wxid']] = user
-        return user_cache.get(user_id)
-    
+                    user_cache[user['wxid']] = UserInfo(
+                        wx_id=user['wxid'],
+                        code=user.get('code', user['wxid']),
+                        wx_name=user.get('name', user['wxid']),
+                        gender=user.get('gender', "未知"),
+                    )
+        return user_cache.get(user_id, UserInfo(user_id, user_id, user_id, "未知"))
+
     def get_alias_in_chatroom(self, group_id: str, user_id: str, **kwargs: dict[str, Any]) -> str:
         """查询群成员昵称"""
         return self.wcf.get_alias_in_chatroom(user_id, group_id) or user_id
