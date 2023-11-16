@@ -71,7 +71,7 @@ class API:
         global user_cache
         if kwargs.get('refresh') or user_id not in user_cache:
             user_cache = {}
-            for user in self.wcf.get_user_list():
+            for user in self.wcf.get_contacts():
                 user_cache[user['wxid']] = user
         return user_cache.get(user_id)
     
