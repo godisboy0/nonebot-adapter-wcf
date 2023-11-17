@@ -8,7 +8,6 @@ from .exception import ApiNotAvailable
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from .basemodel import UserInfo
-from typing import Optional
 
 """
 发现绝大多数插件都是为 onebot.v11 所写，为了更好的复用（白嫖），这里也用 onebot.v11 中相关的数据结构。
