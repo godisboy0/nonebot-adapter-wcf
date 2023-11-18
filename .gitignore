@@ -3,6 +3,7 @@
 /plugins
 main.py
 /test.py
+/error.txt
 
 /data/**
 # Byte-compiled / optimized / DLL files
