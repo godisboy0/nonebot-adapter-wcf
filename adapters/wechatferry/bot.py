@@ -21,7 +21,7 @@ async def process_msg(bot: "Bot", message: Union[str, MessageSegment, Message], 
     # 根据onebot 11 的标准，at行为是一个单独的segement，所以这里需要将at的内容拆分出来。(多个at就是多个segment)
     # 这里直接将at拼到所有的text segement 里面，然后删除at这个segement。
     # 如果没有 text segement，那就将at转化为一个单独的text segement。
-    at_segs = []
+    at_segs: list[MessageSegment] = []
     for seg in message:
         if seg.type == "at":
             at_segs.append(seg)
@@ -30,10 +30,11 @@ async def process_msg(bot: "Bot", message: Union[str, MessageSegment, Message], 
         text_segs: list[MessageSegment] = []
         for seg in message:
             if seg.type == "text":
+                seg.data['text'] = seg.data['text'].strip()
                 text_segs.append(seg)
         if not text_segs:
             a_msg_seg = MessageSegment.text("")
-            message = Message(a_msg_seg) + message
+            message = a_msg_seg + message
             text_segs.append(a_msg_seg)
 
         aters = [at_seg.data['qq'] for at_seg in at_segs]
