@@ -12,31 +12,12 @@ from .exception import NotInteractableEventError
 from .message import MessageSegment, Message
 
 
-async def send(
-    bot: "Bot",
-    event: Event,
-    message: Union[str, MessageSegment, Message],
-    **params: Any,  # extra options passed to send_msg API
-) -> Any:
-    """默认回复消息处理函数。"""
-    try:
-        from_wxid: str = getattr(event, "user_id")
-    except AttributeError:
-        from_wxid = None
-    try:
-        room_wxid: str = getattr(event, "group_id")
-    except AttributeError:
-        room_wxid = None
-    wx_id = from_wxid if not room_wxid else room_wxid
-    if wx_id is None:
-        raise NotInteractableEventError("Event is not interactable")
-
+async def process_msg(bot: "Bot", message: Union[str, MessageSegment, Message], room_wxid=None) -> Message:
     if isinstance(message, str):
         message = Message(MessageSegment.text(message))
     elif isinstance(message, MessageSegment):
         message = Message(message)
 
-    task = []
     # 根据onebot 11 的标准，at行为是一个单独的segement，所以这里需要将at的内容拆分出来。(多个at就是多个segment)
     # 这里直接将at拼到所有的text segement 里面，然后删除at这个segement。
     # 如果没有 text segement，那就将at转化为一个单独的text segement。
@@ -63,12 +44,40 @@ async def send(
         for at_seg in at_segs:
             message.remove(at_seg)
 
+    return message
+
+
+async def do_send_msg(bot: "Bot", wx_id: str, message: Message, **params: Any) -> Any:
+    task = []
     for segment in message:
         api = f"send_{segment.type}"
         segment.data["to_wxid"] = wx_id
         task.append(bot.call_api(api, **segment.data))
 
     return await asyncio.gather(*task)
+
+
+async def send(
+    bot: "Bot",
+    event: Event,
+    message: Union[str, MessageSegment, Message],
+    **params: Any,  # extra options passed to send_msg API
+) -> Any:
+    """默认回复消息处理函数。"""
+    try:
+        from_wxid: str = getattr(event, "user_id")
+    except AttributeError:
+        from_wxid = None
+    try:
+        room_wxid: str = getattr(event, "group_id")
+    except AttributeError:
+        room_wxid = None
+    wx_id = from_wxid if not room_wxid else room_wxid
+    if wx_id is None:
+        raise NotInteractableEventError("Event is not interactable")
+
+    message = await process_msg(bot, message, room_wxid)
+    await do_send_msg(bot, wx_id, message, **params)
 
 
 class Bot(BaseBot):
@@ -78,6 +87,14 @@ class Bot(BaseBot):
 
     send_handler: Callable[["Bot", Event,
                             Union[str, MessageSegment]], Any] = send
+
+    async def send_private_msg(self, user_id: str, message: Union[str, MessageSegment, Message]):
+        message: Message = await process_msg(self, message)
+        await do_send_msg(self, user_id, message)
+
+    async def send_group_msg(self, group_id: str, message: Union[str, MessageSegment, Message]):
+        message: Message = await process_msg(self, message, group_id)
+        await do_send_msg(self, group_id, message)
 
     async def handle_event(self, event: Event) -> None:
         await nb_handle_event(self, event)
