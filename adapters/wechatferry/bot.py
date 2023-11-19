@@ -25,12 +25,13 @@ async def process_msg(bot: "Bot", message: Union[str, MessageSegment, Message], 
     for seg in message:
         if seg.type == "at":
             at_segs.append(seg)
+        if seg.type == "text":
+            seg.data['text'] = seg.data['text'].strip()
 
     if at_segs:
         text_segs: list[MessageSegment] = []
         for seg in message:
             if seg.type == "text":
-                seg.data['text'] = seg.data['text'].strip()
                 text_segs.append(seg)
         if not text_segs:
             a_msg_seg = MessageSegment.text("")
