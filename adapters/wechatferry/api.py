@@ -80,6 +80,8 @@ class API:
                         wx_name=user.get('name', user['wxid']),
                         gender=user.get('gender', "未知"),
                     )
+                    if user.get('code'):
+                        user_cache[user['code']] = user_cache[user['wxid']]
         return user_cache.get(user_id, UserInfo(user_id, user_id, user_id, "未知"))
 
     def get_alias_in_chatroom(self, group_id: str, user_id: str, **kwargs: dict[str, Any]) -> str:
