@@ -3,6 +3,7 @@
 /plugins
 main.py
 /test.py
+/test.ipynb
 /error.txt
 
 /data/**

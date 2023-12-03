@@ -23,7 +23,6 @@ from .sqldb import database
 
 rsv_executor = ThreadPoolExecutor(max_workers=1)
 
-
 class Adapter(BaseAdapter):
 
     @override
@@ -64,7 +63,7 @@ class Adapter(BaseAdapter):
                 msg: WxMsg = await asyncio.get_event_loop().run_in_executor(rsv_executor, self.wcf.get_msg)
                 logger.debug(
                     f"Received message from wcf: {escape_tag(str(msg))}")
-                event = self.wcf_msg_to_event(msg)
+                event = await self.wcf_msg_to_event(msg)
                 if event:
                     await self.record_msg(event)
                     asyncio.create_task(self.bot.handle_event(event))
@@ -75,11 +74,11 @@ class Adapter(BaseAdapter):
             except Exception as e:
                 logger.error("Receiving message error:", e)
 
-    def wcf_msg_to_event(self, msg: WxMsg) -> Optional[Event]:
+    async def wcf_msg_to_event(self, msg: WxMsg) -> Optional[Event]:
         """将wcf消息转换为Event"""
         if not msg:
             return None
-        return convert_to_event(msg, self.login_bot_id, self.wcf)
+        return await convert_to_event(msg, self.login_bot_id, self.wcf)
 
     @classmethod
     @override
