@@ -20,6 +20,7 @@ from .exception import WcfInitFailedException
 from .utils import logger
 from .api import API
 from .sqldb import database
+from .message import Message
 
 rsv_executor = ThreadPoolExecutor(max_workers=1)
 
@@ -150,6 +151,22 @@ class Adapter(BaseAdapter):
                 )'
             )
             # 这个表只是为了记录还未转的信息，为了方便以后分析。所以先不加索引了。
+        if not DB.table_exists("file_msg"):
+            DB.create_table(
+                'create table file_msg ( \
+                    id integer primary key autoincrement, \
+                    type text, \
+                    msg_id_or_md5 text, \
+                    file_path text \
+                )'
+            )
+            # 文件类型的消息，记录一下，方便以后分析。
+            # type: pic, video, file, voice, mp3 ...
+            # msg_id_or_md5: 如果是接收到的信息，就是msg_id，如果是发送的信息，就是md5
+            # file_path: 文件路径
+            # msg_id_or_md5 唯一索引
+            DB.execute('CREATE UNIQUE INDEX IF NOT EXISTS index_msg_id_or_md5 ON file_msg (msg_id_or_md5)')
+        
         return DB
 
 
@@ -158,7 +175,7 @@ class Adapter(BaseAdapter):
             room_id = str(event.group_id) if isinstance(
                 event, GroupMessageEvent) else None
             user_id = str(event.user_id)
-            msg_text = event.message.extract_plain_text()
+            msg_text = event.message.extract_plain_text() or find_file_path(event.message)
             msg_type = ",".join([seg.type for seg in event.message])
             at_users = ",".join([seg.data["qq"]
                                 for seg in event.message if seg.type == "at"])
@@ -196,3 +213,10 @@ class Adapter(BaseAdapter):
             )
         except Exception as e:
             logger.error("Record raw message error:", e)
+
+
+def find_file_path(message: Message):
+    for seg in message:
+        if seg.type in ["image", "video", "file", "voice", "record"]:
+            return seg.data["file"]
+    return None

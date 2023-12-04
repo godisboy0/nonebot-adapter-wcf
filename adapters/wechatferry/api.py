@@ -95,12 +95,13 @@ class API:
         return self.wcf.get_alias_in_chatroom(user_id, group_id) or user_id
 
 
-def record_md5(file_path, db: database):
+def record_md5(file_path: str, db: database):
     """记录文件的md5值"""
+    if not (file_path.endswith(".jpg") or file_path.endswith(".png") or file_path.endswith(".jpeg") or file_path.endswith(".gif")):
+        return
     try:
         md5 = file_md5(file_path)
         if md5:
-            db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
-                      'pic', md5, file_path)
+            asyncio.run_coroutine_threadsafe(db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)', 'pic', md5, file_path), asyncio.get_event_loop())
     except Exception as e:
         logger.error(f"记录文件 {file_path} 的 MD5 值失败: {e}")

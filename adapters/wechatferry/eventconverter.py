@@ -20,8 +20,9 @@ onebot11标准要求：https://github.com/botuniverse/onebot-11/blob/master/READ
 base_dir = os.path.join(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))), "data")
 pic_path = os.path.join(base_dir, 'image')
+voice_path = os.path.join(base_dir, 'voice')
 
-for p in [pic_path]:
+for p in [pic_path, voice_path]:
     if not os.path.exists(p):
         os.makedirs(p, exist_ok=True)
 
@@ -59,10 +60,18 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
             return None
     elif msg.type == WxType.WX_MSG_PICTURE:
         global pic_path
-        img_path = await asyncio.get_event_loop().run_in_executor(download_executor, wcf.download_image, msg.id, msg.extra, pic_path)
+        img_path = await asyncio.get_event_loop().run_in_executor(download_executor, wcf.download_image, msg.id, msg.extra, pic_path, 60)
         if img_path:
             db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)', 'pic', "MSG_ID_" + str(msg.id), img_path)
             args['message'] = Message(MessageSegment.image(img_path))
+        else:
+            return None
+    elif msg.type == WxType.WX_MSG_VOICE:
+        global voice_path
+        file_path = await asyncio.get_event_loop().run_in_executor(download_executor, wcf.get_audio_msg, msg.id, voice_path, 30)
+        if file_path:
+            db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)', 'voice', "MSG_ID_" + str(msg.id), file_path)
+            args['message'] = Message(MessageSegment.record(file_path))
         else:
             return None
     elif msg.type == WxType.WX_MSG_APP:
@@ -73,7 +82,7 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
         if type_field is not None:
             type = type_field.text
             if type == '57':
-                msg = build_quote_message(root, login_wx_id, db)
+                msg = build_refer_message(root, login_wx_id, db)
                 if msg:
                     args['message'] = msg
                 else:
@@ -132,46 +141,66 @@ def try_get_revoke_msg(content: str) -> Optional[str]:
     return newmsgid_element.text if newmsgid_element is not None else None
 
 
-def build_quote_message(root: ET.Element, login_wx_id: str, db: database) -> Message:
+def build_refer_message(root: ET.Element, login_wx_id: str, db: database) -> Message:
     """
     从引用消息中解析出引用的内容。
     目前仅支持引用文本消息和图片消息。
     """
     try:
-        quote_msg_id = int(root.find('appmsg/refermsg/svrid').text)
-        quote_msg_type = int(root.find('appmsg/refermsg/type').text)
+        refer_msg_id = int(root.find('appmsg/refermsg/svrid').text)
+        refer_msg_type = int(root.find('appmsg/refermsg/type').text)
         content = root.find('appmsg/title').text
         speaker_id = root.find('appmsg/refermsg/fromusr').text
-        content = root.find('appmsg/refermsg/content').text
-        if quote_msg_type == 1:
+        refer_content = root.find('appmsg/refermsg/content').text
+        if refer_msg_type == WxType.WX_MSG_TEXT:
             # 引用了文本消息
-            msg = Message(MessageSegment('wx_quote', {
+            msg = Message(MessageSegment('wx_refer', {
                 'content': content,
-                'quote': {
-                    'id': quote_msg_id,
+                'refer': {
+                    'id': refer_msg_id,
                     'type': 'text',
                     'speaker_id': speaker_id,
-                    'content': content
+                    'content': refer_content
                 }
             }))
-        elif quote_msg_type == 3:
+        elif refer_msg_type == WxType.WX_MSG_PICTURE:
             # 引用了图片消息
             is_bot_sent = speaker_id == login_wx_id
             if not is_bot_sent:
-                msg_id_or_md5 = "MSG_ID_" + str(quote_msg_id)
+                msg_id_or_md5 = "MSG_ID_" + str(refer_msg_id)
             else:
-                msg_id_or_md5 = extract_md5(content)
+                msg_id_or_md5 = extract_md5(refer_content)
             pics = db.query(
                 'select file_path from file_msg where type = "pic" and msg_id_or_md5 = ?', msg_id_or_md5)
             if pics:
                 pic_path = pics[0][0]
-            msg = Message(MessageSegment('wx_quote', {
+            msg = Message(MessageSegment('wx_refer', {
                 'content': content,
-                'quote': {
-                    'id': quote_msg_id,
+                'refer': {
+                    'id': refer_msg_id,
                     'type': 'image',
                     'speaker_id': speaker_id,
                     'content': pic_path
+                }
+            }))
+        elif refer_msg_type == WxType.WX_MSG_VOICE:
+            # 引用了语音消息
+            is_bot_sent = speaker_id == login_wx_id
+            if not is_bot_sent:
+                msg_id_or_md5 = "MSG_ID_" + str(refer_msg_id)
+            else:
+                msg_id_or_md5 = extract_md5(refer_content)
+            voices = db.query(
+                'select file_path from file_msg where type = "voice" and msg_id_or_md5 = ?', msg_id_or_md5)
+            if voices:
+                voice_path = voices[0][0]
+            msg = Message(MessageSegment('wx_refer', {
+                'content': content,
+                'refer': {
+                    'id': refer_msg_id,
+                    'type': 'voice',
+                    'speaker_id': speaker_id,
+                    'content': voice_path
                 }
             }))
         
