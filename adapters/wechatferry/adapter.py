@@ -48,7 +48,7 @@ class Adapter(BaseAdapter):
             self.login_bot_id = self.wcf.get_user_info()['wxid']
             self.bot = Bot(adapter=self, self_id=self.login_bot_id)
             self.wcf.enable_receiving_msg()
-            self.api = API(self.wcf)
+            self.api = API(self.wcf, self.db)
             self.receive_message_task = asyncio.create_task(
                 self._receive_message())
             self.bot_connect(self.bot)
@@ -78,7 +78,7 @@ class Adapter(BaseAdapter):
         """将wcf消息转换为Event"""
         if not msg:
             return None
-        return await convert_to_event(msg, self.login_bot_id, self.wcf)
+        return await convert_to_event(msg, self.login_bot_id, self.wcf, self.db)
 
     @classmethod
     @override

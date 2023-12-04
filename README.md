@@ -32,6 +32,7 @@ wechatferry 项目带我入了机器人的坑，之后我自己开发了一个�
 
    ```shell
    ~ nb adapter install nonebot-adapter-onebot
+   ~ pip install nonebot-adapter-console  # 终端测试需要
    ```
 3. 安装wechatferry
 

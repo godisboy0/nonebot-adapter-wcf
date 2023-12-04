@@ -1,15 +1,15 @@
 import asyncio
 from typing import Any, Callable, Union
 from .basemodel import UserInfo
-
 from nonebot.message import handle_event as nb_handle_event
 from nonebot.typing import overrides
-
 from nonebot.adapters import Bot as BaseBot
-
 from .event import Event
 from .exception import NotInteractableEventError
 from .message import MessageSegment, Message
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 async def process_msg(bot: "Bot", message: Union[str, MessageSegment, Message], room_wxid=None) -> Message:
@@ -50,6 +50,7 @@ async def process_msg(bot: "Bot", message: Union[str, MessageSegment, Message], 
 
 
 async def do_send_msg(bot: "Bot", wx_id: str, message: Message, **params: Any) -> Any:
+    logger.info(f"【wcf】即将发送消息，{wx_id} {message} {params}")
     task = []
     for segment in message:
         api = f"send_{segment.type}"

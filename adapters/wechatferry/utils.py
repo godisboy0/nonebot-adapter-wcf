@@ -38,3 +38,23 @@ def handle_api_result(result: Optional[Dict[str, Any]]) -> Any:
         if result.get("status") == "failed":
             raise ActionFailed(**result)
         return result.get("data")
+
+
+def file_md5(file_path) -> Optional[str]:
+    """计算文件的 MD5 值。
+
+    参数:
+        file_path: 文件路径
+
+    返回:
+        文件的 MD5 值
+    """
+    import hashlib
+
+    try:
+        with open(file_path, 'rb') as f:
+            data = f.read()
+        return hashlib.md5(data).hexdigest()
+    except Exception as e:
+        logger.error(f"计算文件 {file_path} 的 MD5 值失败: {e}")
+        return None
