@@ -82,9 +82,9 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
         if type_field is not None:
             type = type_field.text
             if type == '57':
-                msg = build_refer_message(root, login_wx_id, db)
-                if msg:
-                    args['message'] = msg
+                quote_msg = build_refer_message(root, login_wx_id, db)
+                if quote_msg:
+                    args['message'] = quote_msg
                 else:
                     return None
             else:
