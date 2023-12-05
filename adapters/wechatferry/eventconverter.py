@@ -5,13 +5,13 @@ from .type import WxType
 from .utils import logger
 import re
 from nonebot.utils import escape_tag
-import xml.etree.ElementTree as ET
 from typing import Optional
 import os
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import xml.etree.ElementTree as ET
 from .sqldb import database
+import html
 
 """
 onebot11标准要求：https://github.com/botuniverse/onebot-11/blob/master/README.md
@@ -63,7 +63,8 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
         global pic_path
         img_path = await asyncio.get_event_loop().run_in_executor(download_executor, wcf.download_image, msg.id, msg.extra, pic_path, 60)
         if img_path:
-            db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)', 'pic', "MSG_ID_" + str(msg.id), img_path)
+            db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
+                      'pic', "MSG_ID_" + str(msg.id), img_path)
             args['message'] = Message(MessageSegment.image(img_path))
         else:
             return None
@@ -71,7 +72,8 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
         global record_path
         file_path = await asyncio.get_event_loop().run_in_executor(download_executor, wcf.get_audio_msg, msg.id, record_path, 30)
         if file_path:
-            db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)', 'voice', "MSG_ID_" + str(msg.id), file_path)
+            db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
+                      'voice', "MSG_ID_" + str(msg.id), file_path)
             args['message'] = Message(MessageSegment.record(file_path))
         else:
             return None
@@ -203,7 +205,24 @@ def build_refer_message(root: ET.Element, login_wx_id: str, db: database) -> Mes
                     'content': voice_path
                 }
             }))
-        
+        elif refer_msg_type == WxType.WX_MSG_APP:
+            # 引用了应用消息，可能是个引用。我这里直接判断下，把引用消息进一步解析，读出其中的文本，作为回复一个文本信息返回。
+            refer_root = ET.fromstring(html.unescape(refer_content))
+            refer_type_field = refer_root.find('appmsg/type').text
+            if refer_type_field == '57':
+                inner_refer_content = refer_root.find('appmsg/title').text
+                msg = Message(MessageSegment('wx_refer', {
+                    'content': content,
+                    'refer': {
+                        'id': refer_msg_id,
+                        'type': 'refer',
+                        'speaker_id': speaker_id,
+                        'content': inner_refer_content
+                    }
+                }))
+            else:
+                return None
+
         return msg
     except Exception as e:
         logger.error(f"Failed to build reply message: {e}")
