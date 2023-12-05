@@ -12,13 +12,11 @@ class Sender (OnebotSender):
 class PrivateMessageEvent (OnebotPrivateMessageEvent):
     self_id: str # 登录的微信 ID，因为并非int，只好重写一下
     user_id: str # 微信的用户 ID
-    wx_type : int # 微信的消息类型，详见 type.py
 
 class GroupMessageEvent (OnebotGroupMessageEvent):
     self_id: str # 登录的微信 ID，因为并非int，只好重写一下
     user_id: str # 微信的用户 ID
     group_id: str # 微信的群组 ID
-    wx_type : int # 微信的消息类型，详见 type.py
 
 __all__ = [
     "Event",
