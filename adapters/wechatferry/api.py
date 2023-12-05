@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .basemodel import UserInfo
 from .sqldb import database
 from .utils import file_md5, logger
+from .config import AdapterConfig
 
 """
 发现绝大多数插件都是为 onebot.v11 所写，为了更好的复用（白嫖），这里也用 onebot.v11 中相关的数据结构。
@@ -19,13 +20,13 @@ to_wx_id: 群聊时为群聊id, 非群聊时为用户id
 
 user_cache = {}
 
-md5_executor = ThreadPoolExecutor(max_workers=2)
+md5_executor = ThreadPoolExecutor(max_workers=1)
 
 class API:
 
-    def __init__(self, wcf: Wcf, db: database):
+    def __init__(self, wcf: Wcf, config: AdapterConfig):
         self.wcf = wcf
-        self.db = db
+        self.config = config
         self.executor = ThreadPoolExecutor()
 
     def call_method_by_name(self, method_name, kwargs):
@@ -50,7 +51,7 @@ class API:
     def send_image(self, to_wxid: str, file, **kwargs: dict[str, Any]) -> None:
         """发送图片消息"""
         global md5_executor
-        md5_executor.submit(record_md5, file, self.db)
+        md5_executor.submit(record_md5, file, self.config)
         self.wcf.send_image(path=file, receiver=to_wxid)
 
     def send_music(self, to_wxid: str, **kwargs) -> None:
@@ -94,14 +95,18 @@ class API:
         """查询群成员昵称"""
         return self.wcf.get_alias_in_chatroom(user_id, group_id) or user_id
 
+DB: database = None 
 
-def record_md5(file_path: str, db: database):
+def record_md5(file_path: str, config: AdapterConfig):
+    global DB
+    if not DB:
+        DB = database(config.db_path)
     """记录文件的md5值"""
     if not (file_path.endswith(".jpg") or file_path.endswith(".png") or file_path.endswith(".jpeg") or file_path.endswith(".gif")):
         return
     try:
         md5 = file_md5(file_path)
         if md5:
-            asyncio.run_coroutine_threadsafe(db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)', 'pic', md5, file_path), asyncio.get_event_loop())
+            DB.insert('insert OR IGNORE into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)', 'pic', md5, file_path)
     except Exception as e:
         logger.error(f"记录文件 {file_path} 的 MD5 值失败: {e}")

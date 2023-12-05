@@ -49,7 +49,7 @@ class Adapter(BaseAdapter):
             self.login_bot_id = self.wcf.get_user_info()['wxid']
             self.bot = Bot(adapter=self, self_id=self.login_bot_id)
             self.wcf.enable_receiving_msg()
-            self.api = API(self.wcf, self.db)
+            self.api = API(self.wcf, self.adapter_config)
             self.receive_message_task = asyncio.create_task(
                 self._receive_message())
             self.bot_connect(self.bot)

@@ -269,11 +269,11 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
         elif api == "send_image":
             file_path = data['file']
             new_data = {"user_id": data['to_wxid'], "message": ConsoleMessage(
-                [Text(f"{msg_id_seq_str}. [图片] {file_path}")])}
+                [Text(f"{msg_id_seq_str}[图片] {file_path}")])}
         elif api == "send_music":
             file_path = data['audio']
             new_data = {"user_id": data['to_wxid'], "message": ConsoleMessage(
-                [Text(f"{msg_id_seq_str}.[音乐] {file_path}")])}
+                [Text(f"{msg_id_seq_str}[音乐] {file_path}")])}
         elif api == "get_user_info":
             user_id = data['user_id']
             return WcfUserInfo(wx_id=user_id, code=user_id, wx_name=user_id, gender="😝")
