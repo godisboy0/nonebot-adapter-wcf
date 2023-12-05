@@ -69,8 +69,8 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
         else:
             return None
     elif msg.type == WxType.WX_MSG_VOICE:
-        global record_path
-        file_path = await asyncio.get_event_loop().run_in_executor(download_executor, wcf.get_audio_msg, msg.id, record_path, 30)
+        global voice_path
+        file_path = await asyncio.get_event_loop().run_in_executor(download_executor, wcf.get_audio_msg, msg.id, voice_path, 30)
         if file_path:
             db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
                       'voice', "MSG_ID_" + str(msg.id), file_path)
