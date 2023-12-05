@@ -95,12 +95,8 @@ class API:
         """查询群成员昵称"""
         return self.wcf.get_alias_in_chatroom(user_id, group_id) or user_id
 
-DB: database = None 
-
 def record_md5(file_path: str, config: AdapterConfig):
-    global DB
-    if not DB:
-        DB = database(config.db_path)
+    DB = database(config.db_path)
     """记录文件的md5值"""
     if not (file_path.endswith(".jpg") or file_path.endswith(".png") or file_path.endswith(".jpeg") or file_path.endswith(".gif")):
         return
