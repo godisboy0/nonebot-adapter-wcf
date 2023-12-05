@@ -2,18 +2,19 @@ import sqlite3
 from sqlite3 import Connection
 import os
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
+singleton_dict = threading.local()
 
 class database:
 
-    singleton_dict: dict[str, Connection]= {}
-
     def __init__(self, file_path, db_name="wcf") -> None:
         ## 如果同参数
-        if file_path in database.singleton_dict:
-            self.conn = database.singleton_dict[file_path]
+        global singleton_dict
+        if hasattr(singleton_dict, file_path):
+            self.conn = getattr(singleton_dict, file_path)
             return
         
         if not file_path:
@@ -23,7 +24,7 @@ class database:
         
         datafile = os.path.join(file_path, db_name)
         self.conn = sqlite3.connect(datafile)
-        database.singleton_dict[file_path] = self.conn
+        singleton_dict.file_path = self.conn
 
     def create_table(self, sql: str) -> None:
         cursor = self.conn.cursor()
