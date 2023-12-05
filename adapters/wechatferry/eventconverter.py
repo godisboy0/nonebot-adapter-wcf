@@ -176,6 +176,9 @@ def build_refer_message(root: ET.Element, login_wx_id: str, db: database) -> Mes
                 'select file_path from file_msg where type = "pic" and msg_id_or_md5 = ?', msg_id_or_md5)
             if pics:
                 pic_path = pics[0][0]
+            else:
+                # 这里实际上可以再触发一次下载，但是还要看看extra怎么从MSGX.db中获取。。再说吧再说吧。。。
+                pic_path = None
             msg = Message(MessageSegment('wx_refer', {
                 'content': content,
                 'refer': {
@@ -196,6 +199,8 @@ def build_refer_message(root: ET.Element, login_wx_id: str, db: database) -> Mes
                 'select file_path from file_msg where type = "voice" and msg_id_or_md5 = ?', msg_id_or_md5)
             if voices:
                 voice_path = voices[0][0]
+            else:
+                voice_path = None
             msg = Message(MessageSegment('wx_refer', {
                 'content': content,
                 'refer': {
