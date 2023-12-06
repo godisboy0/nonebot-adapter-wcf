@@ -7,9 +7,7 @@ from nonebot.adapters import Bot as BaseBot
 from .event import Event
 from .exception import NotInteractableEventError
 from .message import MessageSegment, Message
-import logging
-
-logger = logging.getLogger(__name__)
+from adapters.wechatferry.utils import logger
 
 
 async def process_msg(bot: "Bot", message: Union[str, MessageSegment, Message], room_wxid=None) -> Message:

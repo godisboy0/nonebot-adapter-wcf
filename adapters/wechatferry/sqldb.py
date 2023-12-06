@@ -1,10 +1,7 @@
 import sqlite3
-from sqlite3 import Connection
 import os
-import logging
 import threading
-
-logger = logging.getLogger(__name__)
+from adapters.wechatferry.utils import logger
 
 singleton_dict = threading.local()
 
