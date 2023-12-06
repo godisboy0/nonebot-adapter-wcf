@@ -49,14 +49,12 @@ async def process_msg(bot: "Bot", message: Union[str, MessageSegment, Message], 
 
 async def do_send_msg(bot: "Bot", wx_id: str, message: Message, **params: Any) -> Any:
     logger.info(f"【wcf】即将发送消息，{wx_id} {message} {params}")
-    task = []
     for segment in message:
         api = f"send_{segment.type}"
         segment.data["to_wxid"] = wx_id
-        task.append(bot.call_api(api, **segment.data))
-
-    return await asyncio.gather(*task)
-
+        await bot.call_api(api, **segment.data)
+        if segment.type != "text" and segment.type != "at":
+            await asyncio.sleep(0.1)
 
 async def send(
     bot: "Bot",

@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional
 
 from nonebot.exception import ActionFailed
 from nonebot.utils import logger_wrapper
+from nonebot.utils import escape_tag
 
 
 class Logger:
@@ -9,16 +10,16 @@ class Logger:
         self.log = logger_wrapper("wechatferry")
 
     def info(self, msg: str, e: Exception=None) -> None:
-        self.log("INFO", msg, e)
+        self.log("INFO", escape_tag(str(msg)), e)
     
     def error(self, msg: str, e: Exception=None) -> None:
-        self.log("ERROR", msg, e)
+        self.log("ERROR", escape_tag(str(msg)), e)
 
     def debug(self, msg: str, e: Exception=None) -> None:
-        self.log("DEBUG", msg, e)
+        self.log("DEBUG", escape_tag(str(msg)), e)
     
     def warning(self, msg: str, e: Exception=None) -> None:
-        self.log("WARNING", msg, e)
+        self.log("WARNING", escape_tag(str(msg)), e)
 
 logger = Logger()
 
