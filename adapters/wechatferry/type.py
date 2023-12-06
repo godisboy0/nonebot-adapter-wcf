@@ -109,7 +109,7 @@ class WxType(IntEnum):
     """撤回消息，准确的说，这是‘系统消息’，撤回是其中之一"""
     
 
-class SubType(IntEnum):
+class WXSubType(IntEnum):
     """应用子类型枚举"""
 
     WX_APPMSG_LINK = 5
@@ -122,7 +122,7 @@ class SubType(IntEnum):
     """合并消息"""
     WX_APPMSG_MINIAPP = 33
     """小程序"""
-    WX_APPMSG_QUOTE = 57
+    WX_APPMSG_REFER = 57
     """引用消息"""
     WX_APPMSG_WCPAY = 2000
     """转账"""

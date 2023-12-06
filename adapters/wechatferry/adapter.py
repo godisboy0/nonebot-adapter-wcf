@@ -175,7 +175,7 @@ class Adapter(BaseAdapter):
             room_id = str(event.group_id) if isinstance(
                 event, GroupMessageEvent) else None
             user_id = str(event.user_id)
-            msg_text = event.message.extract_plain_text() or find_file_path(event.message)
+            msg_text = event.message.extract_plain_text() or jsonfyMsg(event.message)
             msg_type = ",".join([seg.type for seg in event.message])
             at_users = ",".join([seg.data["qq"]
                                 for seg in event.message if seg.type == "at"])
@@ -215,8 +215,7 @@ class Adapter(BaseAdapter):
             logger.error("Record raw message error:", e)
 
 
-def find_file_path(message: Message):
-    for seg in message:
-        if seg.type in ["image", "video", "file", "voice", "record"]:
-            return seg.data["file"]
-    return None
+def jsonfyMsg(message: Message):
+    import json
+    datas = [seg.data for seg in message]
+    return json.dumps(datas, ensure_ascii=False, indent=2)

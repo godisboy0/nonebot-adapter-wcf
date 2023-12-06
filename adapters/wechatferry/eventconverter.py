@@ -1,7 +1,7 @@
 from wcferry import Wcf, WxMsg
 from .event import Event, PrivateMessageEvent, GroupMessageEvent, Sender
 from .message import MessageSegment, Message
-from .type import WxType
+from .type import WxType, WXSubType
 from .utils import logger
 import re
 from nonebot.utils import escape_tag
@@ -12,6 +12,7 @@ import asyncio
 import xml.etree.ElementTree as ET
 from .sqldb import database
 import html
+from .utils import downloader
 
 """
 onebot11标准要求：https://github.com/botuniverse/onebot-11/blob/master/README.md
@@ -60,8 +61,7 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
         else:
             return None
     elif msg.type == WxType.WX_MSG_PICTURE:
-        global pic_path
-        img_path = await asyncio.get_event_loop().run_in_executor(download_executor, wcf.download_image, msg.id, msg.extra, pic_path, 60)
+        img_path = await asyncio.get_event_loop().run_in_executor(download_executor, wcf.download_image, msg.id, msg.extra, pic_path, 30)
         if img_path:
             db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
                       'pic', "MSG_ID_" + str(msg.id), img_path)
@@ -69,7 +69,6 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
         else:
             return None
     elif msg.type == WxType.WX_MSG_VOICE:
-        global voice_path
         file_path = await asyncio.get_event_loop().run_in_executor(download_executor, wcf.get_audio_msg, msg.id, voice_path, 30)
         if file_path:
             db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
@@ -77,23 +76,29 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
             args['message'] = Message(MessageSegment.record(file_path))
         else:
             return None
+    elif msg.type == WxType.WX_MSG_VIDEO:
+        # 这里实际可以下载。但是status返回以后，不代表下载实际完成，需要搞个watchdog，等到文件出现了，再返回。
+        status = wcf.download_attach(msg.id, msg.thumb, msg.extra)
+        return None
     elif msg.type == WxType.WX_MSG_APP:
         # xml 内部有个type字段，标志了子类型
         # type = 57 引用消息，这里作为一种扩展类型。
         root = ET.fromstring(msg.content)
-        type_field = root.find('appmsg/type')
-        if type_field is not None:
-            type = type_field.text
-            if type == '57':
-                quote_msg = build_refer_message(root, login_wx_id, db)
-                if quote_msg:
-                    args['message'] = quote_msg
-                else:
-                    return None
+        subtype = int(root.find('appmsg/type'))
+        if subtype == WXSubType.WX_APPMSG_REFER:
+            refer_msg = await build_refer_message(root, login_wx_id, db)
+            if refer_msg:
+                args['message'] = refer_msg
             else:
-                return None    # 暂时不支持其他类型的app消息
+                return None
+        elif subtype == WXSubType.WX_APPMSG_LINK:
+            link_msg = await build_link_message(root, msg_id=msg.id)
+            if link_msg:
+                args['message'] = link_msg
+            else:
+                return None
         else:
-            return None
+            return None    # 暂时不支持其他类型的app消息
     else:
         return None
     args['original_message'] = args["message"]
@@ -143,7 +148,25 @@ def try_get_revoke_msg(content: str) -> Optional[str]:
     return newmsgid_element.text if newmsgid_element is not None else None
 
 
-def build_refer_message(root: ET.Element, login_wx_id: str, db: database) -> Message:
+async def build_link_message(root: ET.Element, msg_id: str) -> Message:
+    title = root.find('appmsg/title').text
+    desc = root.find('appmsg/des').text
+    url = root.find('appmsg/url').text
+    url_img = root.find('appmsg/thumburl').text
+    from urllib.parse import urlparse, parse_qs
+    parsed_url = urlparse(url)
+    params = parse_qs(parsed_url.query)
+    wxtype = params.get('wxtype', [None])[0]
+    global pic_path
+    if wxtype:
+        img_path = await asyncio.get_event_loop().run_in_executor(download_executor, downloader(url=url_img, file_name=f'{msg_id}.{wxtype}',  path=pic_path).download)
+    else:
+        img_path = None
+    return Message(MessageSegment.share(
+        title=title, content=desc, url=url, image=img_path))
+
+
+async def build_refer_message(root: ET.Element, login_wx_id: str, db: database) -> Message:
     """
     从引用消息中解析出引用的内容。
     目前仅支持引用文本消息和图片消息。
@@ -212,9 +235,11 @@ def build_refer_message(root: ET.Element, login_wx_id: str, db: database) -> Mes
             }))
         elif refer_msg_type == WxType.WX_MSG_APP:
             # 引用了应用消息，可能是个引用。我这里直接判断下，把引用消息进一步解析，读出其中的文本，作为回复一个文本信息返回。
-            refer_root = ET.fromstring(html.unescape(refer_content))
-            refer_type_field = refer_root.find('appmsg/type').text
-            if refer_type_field == '57':
+            refer_root = try_get_refer_root(refer_content)
+            if refer_root is None:
+                return None
+            refered_subtype = int(refer_root.find('appmsg/type').text)
+            if refered_subtype == WXSubType.WX_APPMSG_REFER:
                 inner_refer_content = refer_root.find('appmsg/title').text
                 msg = Message(MessageSegment('wx_refer', {
                     'content': content,
@@ -225,6 +250,18 @@ def build_refer_message(root: ET.Element, login_wx_id: str, db: database) -> Mes
                         'content': inner_refer_content
                     }
                 }))
+            elif refered_subtype == WXSubType.WX_APPMSG_LINK:
+                refered_link_msg: Message = await build_link_message(
+                    refer_root, msg_id=refer_msg_id)
+                msg = Message(MessageSegment('wx_refer', {
+                    'content': content,
+                    'refer': {
+                        'id': refer_msg_id,
+                        'type': 'link',
+                        'speaker_id': speaker_id,
+                        'content': refered_link_msg[0].data
+                    }
+                }))
             else:
                 return None
 
@@ -232,6 +269,19 @@ def build_refer_message(root: ET.Element, login_wx_id: str, db: database) -> Mes
     except Exception as e:
         logger.error(f"Failed to build reply message: {e}")
         return None
+
+
+def try_get_refer_root(content: str) -> Optional[ET.Element]:
+    try:
+        root = ET.fromstring(content)
+        return root
+    except ET.ParseError:
+        try:
+            content = html.unescape(content)
+            root = ET.fromstring(content)
+            return root
+        except ET.ParseError:
+            return None
 
 
 def extract_md5(content) -> Optional[str]:

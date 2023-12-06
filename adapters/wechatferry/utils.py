@@ -3,7 +3,10 @@ from typing import Any, Dict, Optional
 from nonebot.exception import ActionFailed
 from nonebot.utils import logger_wrapper
 from nonebot.utils import escape_tag
-
+import os
+import requests
+import re
+import asyncio
 
 class Logger:
     def __init__(self) -> None:
@@ -59,3 +62,55 @@ def file_md5(file_path) -> Optional[str]:
     except Exception as e:
         logger.error(f"计算文件 {file_path} 的 MD5 值失败: {e}")
         return None
+
+
+class downloader:
+    def __init__(self, url, file_name, path: str, override: bool = True, chunk_size: int = 1024, headers={}) -> None:
+        rstr = r"[ \/\\\:\*\?\"\<\>\|\&]"  # '/ \ : * ? " < > |'
+        file_name = re.sub(rstr, "_", file_name)
+        url = str(url).strip('"')
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+
+        self.__url = url
+        self.__path = path
+        self.__file_name = file_name
+        self.__override = override
+        self.__chunk_size = chunk_size
+        self.headers = headers if headers else {}
+
+    async def downloadAsync(self) -> str:
+        return await asyncio.get_event_loop().run_in_executor(None, self.download)
+
+    def download(self) -> str:
+        if not self.__url or self.__url.lower == 'none':
+            return None
+        final_path = os.path.join(self.__path, self.__file_name)
+        if self.__override:
+            if os.path.exists(final_path):
+                os.remove(final_path)
+        else:
+            if os.path.exists(final_path):
+                return final_path
+        try:
+            response = requests.get(self.__url, stream=True,
+                                    timeout=3, headers=self.headers)
+            size = 0
+            if response.status_code == 200:
+                try:
+                    with open(final_path, 'wb') as file:
+                        for data in response.iter_content(chunk_size=self.__chunk_size):
+                            file.write(data)
+                            size += len(data)
+                    return final_path
+                except Exception:
+                    logger.warning(
+                        f'链接{self.__url}下载失败，状态码：{response.status_code}, file_name: {self.__file_name}')
+                    return None
+            else:
+                logger.warning(
+                    f'链接{self.__url}下载失败，状态码：{response.status_code}, file_name: {self.__file_name}')
+                return None
+        except Exception as e:
+            logger.error(f'链接{self.__url}下载失败', e)
+            return None
