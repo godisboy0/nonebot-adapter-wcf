@@ -78,6 +78,7 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
             return None
     elif msg.type == WxType.WX_MSG_VIDEO:
         # 这里实际可以下载。但是status返回以后，不代表下载实际完成，需要搞个watchdog，等到文件出现了，再返回。
+        # 和 thumb 在一个文件夹。但名字是后缀改成.mp4
         status = wcf.download_attach(msg.id, msg.thumb, msg.extra)
         return None
     elif msg.type == WxType.WX_MSG_APP:
