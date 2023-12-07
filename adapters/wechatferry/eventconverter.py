@@ -164,15 +164,16 @@ async def build_link_message(root: ET.Element, msg_id: str, extra: str = None) -
     desc = None if root.find('appmsg/des') is None else root.find('appmsg/des').text
     url = root.find('appmsg/url').text
     if extra:
-        img_path = extra
+        # 把 extra 复制到 pic_path 下，然后返回路径(cache路径)
+        import shutil
+        extra_type = extra.split('.')[-1]
+        img_path = os.path.join(pic_path, msg_id + '.' + extra_type)
+        shutil.copyfile(extra, img_path)
     elif url_img_ele:= root.find('appmsg/thumburl'):
         url_img = url_img_ele.text
-        from urllib.parse import urlparse, parse_qs
-        parsed_url = urlparse(url)
-        params = parse_qs(parsed_url.query)
-        wxtype = params.get('wxtype', [None])[0]
-        global pic_path
-        if wxtype:
+        match = re.search(r'wxtype=([^&]*)', url_img)
+        if match:
+            wxtype = match.group(1)
             img_path = await asyncio.get_event_loop().run_in_executor(download_executor, downloader(url=url_img, file_name=f'{msg_id}.{wxtype}',  path=pic_path).download)
         else:
             img_path = None
