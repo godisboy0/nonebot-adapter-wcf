@@ -98,10 +98,9 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
         elif subtype == WXSubType.WX_APPMSG_FILE:
             for _ in range(60):
                 if os.path.exists(msg.extra):
-                    if args.get('message') is not None:
-                        # 不知道为什么，这个 if 可能被调用多次。。。。
-                        break
-                    file_path = shutil.copy(msg.extra, file_dir_path)
+                    file_path = os.path.join(file_dir_path, os.path.basename(msg.extra))
+                    if not os.path.exists(file_path):
+                        shutil.copyfile(msg.extra, file_path)
                     db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
                                 'file', "MSG_ID_" + str(msg.id), file_path)
                     args['message'] = Message(MessageSegment('file', {'file': file_path}))
