@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 from .sqldb import database
 import html
 from .utils import downloader
+import shutil
 
 """
 onebot11标准要求：https://github.com/botuniverse/onebot-11/blob/master/README.md
@@ -23,8 +24,9 @@ base_dir = os.path.join(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))), "data")
 pic_path = os.path.join(base_dir, 'image')
 voice_path = os.path.join(base_dir, 'voice')
+video_path = os.path.join(base_dir, 'video')
 
-for p in [pic_path, voice_path]:
+for p in [pic_path, voice_path, video_path]:
     if not os.path.exists(p):
         os.makedirs(p, exist_ok=True)
 
@@ -82,9 +84,11 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
         status = wcf.download_attach(msg.id, msg.thumb, msg.extra)
         if status == 0:
             for _ in range(60):
-                vidoe_path = msg.thumb.split('.')[0] + '.mp4'
-                if os.path.exists(vidoe_path):
-                    args['message'] = Message(MessageSegment.video(vidoe_path))
+                raw_video_path = msg.thumb.split('.')[0] + '.mp4'
+                new_vieo_path = os.path.join(video_path, msg.id + '.mp4')
+                if os.path.exists(raw_video_path):
+                    shutil.copyfile(raw_video_path, new_vieo_path)
+                    args['message'] = Message(MessageSegment.video(new_vieo_path))
                     break
                 else:
                     await asyncio.sleep(0.5)
@@ -165,7 +169,6 @@ async def build_link_message(root: ET.Element, msg_id: str, extra: str = None) -
     url = root.find('appmsg/url').text
     if extra:
         # 把 extra 复制到 pic_path 下，然后返回路径(cache路径)
-        import shutil
         extra_type = extra.split('.')[-1]
         img_path = os.path.join(pic_path, msg_id + '.' + extra_type)
         shutil.copyfile(extra, img_path)
