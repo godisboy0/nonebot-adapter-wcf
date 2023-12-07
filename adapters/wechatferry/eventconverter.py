@@ -77,15 +77,24 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
         else:
             return None
     elif msg.type == WxType.WX_MSG_VIDEO:
-        # 这里实际可以下载。但是status返回以后，不代表下载实际完成，需要搞个watchdog，等到文件出现了，再返回。
+        # 这里实际可以下载。但是status返回以后，不代表下载实际完成，需要搞个监听，等到文件出现了，再返回。
         # 和 thumb 在一个文件夹。但名字是后缀改成.mp4
         status = wcf.download_attach(msg.id, msg.thumb, msg.extra)
-        return None
+        if status == 0:
+            for _ in range(60):
+                vidoe_path = msg.thumb.split('.')[0] + '.mp4'
+                if os.path.exists(vidoe_path):
+                    args['message'] = Message(MessageSegment.video(vidoe_path))
+                    break
+                else:
+                    await asyncio.sleep(0.5)
+        else:
+            return None
     elif msg.type == WxType.WX_MSG_APP:
         # xml 内部有个type字段，标志了子类型
         # type = 57 引用消息，这里作为一种扩展类型。
         root = ET.fromstring(msg.content)
-        subtype = int(root.find('appmsg/type'))
+        subtype = int(root.find('appmsg/type').text)
         if subtype == WXSubType.WX_APPMSG_REFER:
             refer_msg = await build_refer_message(root, login_wx_id, db)
             if refer_msg:
