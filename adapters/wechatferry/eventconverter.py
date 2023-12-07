@@ -96,16 +96,22 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
             if link_msg:
                 args['message'] = link_msg
         elif subtype == WXSubType.WX_APPMSG_FILE:
-            for _ in range(60):
-                if os.path.exists(msg.extra):
-                    file_path = os.path.join(file_dir_path, str(msg.id) + '.' + msg.extra.split('.')[-1])
-                    shutil.copyfile(msg.extra, file_path)
-                    db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
-                                'file', "MSG_ID_" + str(msg.id), file_path)
-                    args['message'] = Message(MessageSegment('file', {'file': file_path}))
-                    break
-                else:
-                    await asyncio.sleep(0.3)
+            # 文件会触发两次消息，第一次是文件发出消息，第二次是文件上传完成消息。一般来说，我们需要上传完成消息，因为这样这边才开始下载
+            # 引用一个尚未上传完毕的消息时，refer_msg_id是第一个消息，引用上传完毕的消息时，refer_msg_id是第二个消息。
+            # 但是在文件很小的情况下，这俩消息也就接近于同时到达了，而且文件都下载好了，于是会触发两次下载，并且都会发出带文件的消息，这很不好，我们粗暴地忽略第一条消息。
+            # 第二条消息会有一个 overwrite_newmsgid 字段，如果存在，说明是第二条消息，否则是第一条消息。
+            has_override_msg = root.find('appmsg/appattach/overwrite_newmsgid') is not None
+            if has_override_msg:
+                for _ in range(60):
+                    if os.path.exists(msg.extra):
+                        file_path = os.path.join(file_dir_path, str(msg.id) + '.' + msg.extra.split('.')[-1])
+                        shutil.copyfile(msg.extra, file_path)
+                        db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
+                                    'file', "MSG_ID_" + str(msg.id), file_path)
+                        args['message'] = Message(MessageSegment('file', {'file': file_path}))
+                        break
+                    else:
+                        await asyncio.sleep(0.3)
 
     if args.get('message') is None:
         return None
