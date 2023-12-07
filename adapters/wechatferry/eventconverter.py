@@ -171,6 +171,11 @@ async def build_link_message(root: ET.Element, msg_id: int, thumb: str = None) -
         # 把 thumb 复制到 pic_path 下，然后返回路径(cache路径)
         extra_type = thumb.split('.')[-1]
         img_path = os.path.join(pic_path, str(msg_id) + '.' + extra_type)
+        for _ in range(60):
+            if os.path.exists(thumb):
+                break
+            else:
+                await asyncio.sleep(0.3)
         shutil.copyfile(thumb, img_path)
     elif url_img_ele:= root.find('appmsg/thumburl'):
         url_img = url_img_ele.text
