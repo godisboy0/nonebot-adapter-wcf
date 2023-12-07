@@ -101,7 +101,7 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
                     file_path = shutil.copy(msg.extra, file_dir_path)
                     db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
                                 'file', "MSG_ID_" + str(msg.id), file_path)
-                    args['message'] = Message(MessageSegment.file(file_path))
+                    args['message'] = Message(MessageSegment('file', {'file': file_path}))
                     break
                 else:
                     await asyncio.sleep(0.5)
