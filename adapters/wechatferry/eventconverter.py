@@ -160,7 +160,7 @@ def try_get_revoke_msg(content: str) -> Optional[str]:
 
 async def build_link_message(root: ET.Element, msg_id: str) -> Message:
     title = root.find('appmsg/title').text
-    desc = root.find('appmsg/des').text
+    desc = None if root.find('appmsg/des') is None else root.find('appmsg/des').text
     url = root.find('appmsg/url').text
     url_img = root.find('appmsg/thumburl').text
     from urllib.parse import urlparse, parse_qs
