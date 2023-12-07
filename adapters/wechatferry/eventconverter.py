@@ -177,7 +177,7 @@ async def build_link_message(root: ET.Element, msg_id: int, thumb: str = None) -
             else:
                 await asyncio.sleep(0.3)
         shutil.copyfile(thumb, img_path)
-    elif url_img_ele:= root.find('appmsg/thumburl') is not None:
+    elif (url_img_ele:= root.find('appmsg/thumburl')) is not None:
         url_img = url_img_ele.text
         match = re.search(r'wxtype=([^&]*)', url_img)
         if match:
