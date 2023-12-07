@@ -185,6 +185,8 @@ async def build_link_message(root: ET.Element, msg_id: int, thumb: str = None) -
             img_path = await asyncio.get_event_loop().run_in_executor(download_executor, downloader(url=url_img, file_name=f'{msg_id}.{wxtype}',  path=pic_path).download)
         else:
             img_path = None
+    else:
+        img_path = None
     return Message(MessageSegment.share(
         title=title, content=desc, url=url, image=img_path))
 
