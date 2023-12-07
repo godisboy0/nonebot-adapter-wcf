@@ -327,13 +327,18 @@ async def build_refer_message(root: ET.Element, login_wx_id: str, db: database) 
                     }
                 }))
             elif refered_subtype == WXSubType.WX_APPMSG_FILE:
+                has_override_msg = refer_root.find(
+                    'appmsg/appattach/overwrite_newmsgid') is not None
+                if not has_override_msg:
+                    return None
+                file_path = os.path.join(file_dir_path, str(refer_msg_id) + '.' + refer_root.find('appmsg/appattach/fileext').text)
                 msg = Message(MessageSegment('wx_refer', {
                     'content': content,
                     'refer': {
                         'id': refer_msg_id,
                         'type': 'file',
                         'speaker_id': speaker_id,
-                        'content': None
+                        'content': file_path
                     }
                 }))
             else:
