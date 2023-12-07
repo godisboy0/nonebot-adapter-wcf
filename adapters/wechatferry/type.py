@@ -103,6 +103,8 @@ class WxType(IntEnum):
     """位置"""
     WX_MSG_APP = 49
     """应用类型，这也是个复杂的类型，类似发送链接，发送小程序，引用消息。都是这个type，需要内部拆分。"""
+    WX_MSG_HEARTBEAT = 51
+    """看着跟心跳包似得。。也没啥用"""
     WX_MSG_SYSTEM = 10000
     """系统消息"""
     WX_MSG_REVOKE = 10002

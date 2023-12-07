@@ -50,25 +50,28 @@ class API:
 
     def send_image(self, to_wxid: str, file, **kwargs: dict[str, Any]) -> None:
         """发送图片消息"""
-        global md5_executor
         md5_executor.submit(record_md5, file, self.config)
         self.wcf.send_image(path=file, receiver=to_wxid)
 
     def send_music(self, to_wxid: str, **kwargs) -> None:
         """发送音乐消息"""
         if kwargs.get("audio"):
+            md5_executor.submit(record_md5, kwargs.get('audio'), self.config)
             self.wcf.send_file(path=kwargs.get('audio'), receiver=to_wxid)
 
     def send_video(self, to_wxid: str, file, **kwargs: dict[str, Any]) -> None:
         """发送视频消息"""
+        md5_executor.submit(record_md5, file, self.config)
         self.wcf.send_file(path=file, receiver=to_wxid)
 
     def send_file(self, to_wxid: str, file, **kwargs: dict[str, Any]) -> None:
         """发送文件消息"""
+        md5_executor.submit(record_md5, file, self.config)
         self.wcf.send_file(path=file, receiver=to_wxid)
 
     def send_record(self, to_wxid: str, file, **kwargs: dict[str, Any]) -> None:
         """发送文件消息"""
+        md5_executor.submit(record_md5, file, self.config)
         self.wcf.send_file(path=file, receiver=to_wxid)
 
     def get_user_info(self, user_id: str, **kwargs: dict[str, Any]) -> UserInfo:

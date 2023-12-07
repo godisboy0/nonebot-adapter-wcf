@@ -23,10 +23,11 @@ onebot11 message segment 类型: https://github.com/botuniverse/onebot-11/blob/m
 base_dir = os.path.join(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))), "data")
 pic_path = os.path.join(base_dir, 'image')
-voice_path = os.path.join(base_dir, 'voice')
-video_path = os.path.join(base_dir, 'video')
+voice_dir_path = os.path.join(base_dir, 'voice')
+video_dir_path = os.path.join(base_dir, 'video')
+file_dir_path = os.path.join(base_dir, 'file')
 
-for p in [pic_path, voice_path, video_path]:
+for p in [pic_path, voice_dir_path, video_dir_path, file_dir_path]:
     if not os.path.exists(p):
         os.makedirs(p, exist_ok=True)
 
@@ -46,7 +47,7 @@ def __get_mention_list(req: WxMsg) -> list[str]:
 async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database) -> Event:
     """Converts a wechatferry event to a nonebot event."""
     logger.debug(f"Converting message to event: {escape_tag(str(msg))}")
-    if not msg:
+    if not msg or msg.type == WxType.WX_MSG_HEARTBEAT:
         return None
 
     args = {}
@@ -60,40 +61,26 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
         if content:
             args['message'] = Message(MessageSegment(
                 'revoke', {'revoke_msg_id': content}))
-        else:
-            return None
     elif msg.type == WxType.WX_MSG_PICTURE:
         img_path = await asyncio.get_event_loop().run_in_executor(download_executor, wcf.download_image, msg.id, msg.extra, pic_path, 30)
         if img_path:
             db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
                       'pic', "MSG_ID_" + str(msg.id), img_path)
             args['message'] = Message(MessageSegment.image(img_path))
-        else:
-            return None
     elif msg.type == WxType.WX_MSG_VOICE:
-        file_path = await asyncio.get_event_loop().run_in_executor(download_executor, wcf.get_audio_msg, msg.id, voice_path, 30)
+        file_path = await asyncio.get_event_loop().run_in_executor(download_executor, wcf.get_audio_msg, msg.id, voice_dir_path, 30)
         if file_path:
             db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
                       'voice', "MSG_ID_" + str(msg.id), file_path)
             args['message'] = Message(MessageSegment.record(file_path))
-        else:
-            return None
     elif msg.type == WxType.WX_MSG_VIDEO:
         # 这里实际可以下载。但是status返回以后，不代表下载实际完成，需要搞个监听，等到文件出现了，再返回。
         # 和 thumb 在一个文件夹。但名字是后缀改成.mp4
-        status = wcf.download_attach(msg.id, msg.thumb, msg.extra)
-        if status == 0:
-            for _ in range(60):
-                raw_video_path = msg.thumb.split('.')[0] + '.mp4'
-                new_vieo_path = os.path.join(video_path, str(msg.id) + '.mp4')
-                if os.path.exists(raw_video_path):
-                    shutil.copyfile(raw_video_path, new_vieo_path)
-                    args['message'] = Message(MessageSegment.video(new_vieo_path))
-                    break
-                else:
-                    await asyncio.sleep(0.5)
-        else:
-            return None
+        video_msg = await build_video_message(msg, login_wx_id, wcf)
+        if video_msg is not None:
+            db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
+                      'voice', "MSG_ID_" + str(msg.id), file_path)
+            args['message'] = video_msg
     elif msg.type == WxType.WX_MSG_APP:
         # xml 内部有个type字段，标志了子类型
         # type = 57 引用消息，这里作为一种扩展类型。
@@ -103,19 +90,25 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
             refer_msg = await build_refer_message(root, login_wx_id, db)
             if refer_msg:
                 args['message'] = refer_msg
-            else:
-                return None
         elif subtype == WXSubType.WX_APPMSG_LINK:
             # extra 就是 pic
             link_msg = await build_link_message(root, msg_id=msg.id, thumb = msg.thumb)
             if link_msg:
                 args['message'] = link_msg
-            else:
-                return None
-        else:
-            return None    # 暂时不支持其他类型的app消息
-    else:
+        elif subtype == WXSubType.WX_APPMSG_FILE:
+            for _ in range(60):
+                if os.path.exists(msg.extra):
+                    file_path = shutil.copy(msg.extra, file_dir_path)
+                    db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
+                                'file', "MSG_ID_" + str(msg.id), file_path)
+                    args['message'] = Message(MessageSegment.file(file_path))
+                    break
+                else:
+                    await asyncio.sleep(0.5)
+
+    if args['message'] is None:
         return None
+    
     args['original_message'] = args["message"]
 
     args.update({
@@ -163,6 +156,21 @@ def try_get_revoke_msg(content: str) -> Optional[str]:
     return newmsgid_element.text if newmsgid_element is not None else None
 
 
+async def build_video_message(msg: WxMsg, wcf: Wcf) -> Message:
+    status = wcf.download_attach(msg.id, msg.thumb, msg.extra)
+    if status == 0:
+        for _ in range(60):
+            raw_video_path = msg.thumb.split('.')[0] + '.mp4'
+            new_vieo_path = os.path.join(video_dir_path, str(msg.id) + '.mp4')
+            if os.path.exists(raw_video_path):
+                shutil.copyfile(raw_video_path, new_vieo_path)
+                return Message(MessageSegment.video(new_vieo_path))
+            else:
+                await asyncio.sleep(0.5)
+    else:
+        return None
+
+
 async def build_link_message(root: ET.Element, msg_id: int, thumb: str = None) -> Message:
     title = root.find('appmsg/title').text
     desc = None if root.find('appmsg/des') is None else root.find('appmsg/des').text
@@ -197,6 +205,7 @@ async def build_refer_message(root: ET.Element, login_wx_id: str, db: database) 
     目前仅支持引用文本消息和图片消息。
     """
     try:
+        msg = None
         refer_msg_id = int(root.find('appmsg/refermsg/svrid').text)
         refer_msg_type = int(root.find('appmsg/refermsg/type').text)
         content = root.find('appmsg/title').text
@@ -234,6 +243,29 @@ async def build_refer_message(root: ET.Element, login_wx_id: str, db: database) 
                     'type': 'image',
                     'speaker_id': speaker_id,
                     'content': pic_path
+                }
+            }))
+        elif refer_msg_type == WxType.WX_MSG_VIDEO:
+            # 引用了视频消息
+            is_bot_sent = speaker_id == login_wx_id
+            if not is_bot_sent:
+                msg_id_or_md5 = "MSG_ID_" + str(refer_msg_id)
+            else:
+                msg_id_or_md5 = extract_md5(refer_content)
+            videos = db.query(
+                'select file_path from file_msg where type = "video" and msg_id_or_md5 = ?', msg_id_or_md5)
+            if videos:
+                video_path = videos[0][0]
+            else:
+                # 这里实际上可以再触发一次下载，但是还要看看extra怎么从MSGX.db中获取。。再说吧再说吧。。。
+                video_path = None
+            msg = Message(MessageSegment('wx_refer', {
+                'content': content,
+                'refer': {
+                    'id': refer_msg_id,
+                    'type': 'video',
+                    'speaker_id': speaker_id,
+                    'content': video_path
                 }
             }))
         elif refer_msg_type == WxType.WX_MSG_VOICE:
@@ -285,6 +317,16 @@ async def build_refer_message(root: ET.Element, login_wx_id: str, db: database) 
                         'type': 'link',
                         'speaker_id': speaker_id,
                         'content': refered_link_msg[0].data
+                    }
+                }))
+            elif refered_subtype == WXSubType.WX_APPMSG_FILE:
+                msg = Message(MessageSegment('wx_refer', {
+                    'content': content,
+                    'refer': {
+                        'id': refer_msg_id,
+                        'type': 'file',
+                        'speaker_id': speaker_id,
+                        'content': None
                     }
                 }))
             else:
