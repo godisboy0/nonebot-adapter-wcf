@@ -107,7 +107,7 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
                 return None
         elif subtype == WXSubType.WX_APPMSG_LINK:
             # extra 就是 pic
-            link_msg = await build_link_message(root, msg_id=msg.id, extra = msg.extra)
+            link_msg = await build_link_message(root, msg_id=msg.id, thumb = msg.thumb)
             if link_msg:
                 args['message'] = link_msg
             else:
@@ -163,15 +163,15 @@ def try_get_revoke_msg(content: str) -> Optional[str]:
     return newmsgid_element.text if newmsgid_element is not None else None
 
 
-async def build_link_message(root: ET.Element, msg_id: int, extra: str = None) -> Message:
+async def build_link_message(root: ET.Element, msg_id: int, thumb: str = None) -> Message:
     title = root.find('appmsg/title').text
     desc = None if root.find('appmsg/des') is None else root.find('appmsg/des').text
     url = root.find('appmsg/url').text
-    if extra:
-        # 把 extra 复制到 pic_path 下，然后返回路径(cache路径)
-        extra_type = extra.split('.')[-1]
+    if thumb:
+        # 把 thumb 复制到 pic_path 下，然后返回路径(cache路径)
+        extra_type = thumb.split('.')[-1]
         img_path = os.path.join(pic_path, str(msg_id) + '.' + extra_type)
-        shutil.copyfile(extra, img_path)
+        shutil.copyfile(thumb, img_path)
     elif url_img_ele:= root.find('appmsg/thumburl'):
         url_img = url_img_ele.text
         match = re.search(r'wxtype=([^&]*)', url_img)
