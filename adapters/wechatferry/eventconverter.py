@@ -102,7 +102,8 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
             else:
                 return None
         elif subtype == WXSubType.WX_APPMSG_LINK:
-            link_msg = await build_link_message(root, msg_id=msg.id)
+            # extra 就是 pic
+            link_msg = await build_link_message(root, msg_id=msg.id, extra = msg.extra)
             if link_msg:
                 args['message'] = link_msg
             else:
@@ -158,20 +159,23 @@ def try_get_revoke_msg(content: str) -> Optional[str]:
     return newmsgid_element.text if newmsgid_element is not None else None
 
 
-async def build_link_message(root: ET.Element, msg_id: str) -> Message:
+async def build_link_message(root: ET.Element, msg_id: str, extra: str = None) -> Message:
     title = root.find('appmsg/title').text
     desc = None if root.find('appmsg/des') is None else root.find('appmsg/des').text
     url = root.find('appmsg/url').text
-    url_img = root.find('appmsg/thumburl').text
-    from urllib.parse import urlparse, parse_qs
-    parsed_url = urlparse(url)
-    params = parse_qs(parsed_url.query)
-    wxtype = params.get('wxtype', [None])[0]
-    global pic_path
-    if wxtype:
-        img_path = await asyncio.get_event_loop().run_in_executor(download_executor, downloader(url=url_img, file_name=f'{msg_id}.{wxtype}',  path=pic_path).download)
-    else:
-        img_path = None
+    if extra:
+        img_path = extra
+    elif url_img_ele:= root.find('appmsg/thumburl'):
+        url_img = url_img_ele.text
+        from urllib.parse import urlparse, parse_qs
+        parsed_url = urlparse(url)
+        params = parse_qs(parsed_url.query)
+        wxtype = params.get('wxtype', [None])[0]
+        global pic_path
+        if wxtype:
+            img_path = await asyncio.get_event_loop().run_in_executor(download_executor, downloader(url=url_img, file_name=f'{msg_id}.{wxtype}',  path=pic_path).download)
+        else:
+            img_path = None
     return Message(MessageSegment.share(
         title=title, content=desc, url=url, image=img_path))
 
