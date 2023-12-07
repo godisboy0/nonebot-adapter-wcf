@@ -104,7 +104,7 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
                     args['message'] = Message(MessageSegment('file', {'file': file_path}))
                     break
                 else:
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(0.3)
 
     if args.get('message') is None:
         return None
