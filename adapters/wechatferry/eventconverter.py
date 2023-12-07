@@ -85,7 +85,7 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
         if status == 0:
             for _ in range(60):
                 raw_video_path = msg.thumb.split('.')[0] + '.mp4'
-                new_vieo_path = os.path.join(video_path, msg.id + '.mp4')
+                new_vieo_path = os.path.join(video_path, str(msg.id) + '.mp4')
                 if os.path.exists(raw_video_path):
                     shutil.copyfile(raw_video_path, new_vieo_path)
                     args['message'] = Message(MessageSegment.video(new_vieo_path))
@@ -163,14 +163,14 @@ def try_get_revoke_msg(content: str) -> Optional[str]:
     return newmsgid_element.text if newmsgid_element is not None else None
 
 
-async def build_link_message(root: ET.Element, msg_id: str, extra: str = None) -> Message:
+async def build_link_message(root: ET.Element, msg_id: int, extra: str = None) -> Message:
     title = root.find('appmsg/title').text
     desc = None if root.find('appmsg/des') is None else root.find('appmsg/des').text
     url = root.find('appmsg/url').text
     if extra:
         # 把 extra 复制到 pic_path 下，然后返回路径(cache路径)
         extra_type = extra.split('.')[-1]
-        img_path = os.path.join(pic_path, msg_id + '.' + extra_type)
+        img_path = os.path.join(pic_path, str(msg_id) + '.' + extra_type)
         shutil.copyfile(extra, img_path)
     elif url_img_ele:= root.find('appmsg/thumburl'):
         url_img = url_img_ele.text
