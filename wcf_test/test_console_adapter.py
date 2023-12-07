@@ -35,7 +35,7 @@ onebot11 message segment 类型: https://github.com/botuniverse/onebot-11/blob/m
 
 class SimpleMsg:
 
-    def __init__(self, msg_id: int, msg_type: Literal["text", "image", "voice", "refer", "video"], 
+    def __init__(self, msg_id: int, msg_type: Literal["text", "image", "voice", "refer", "video", "file", "link"], 
                  raw_msg: str, msg: str, speaker_id, room_id=None):
         self.msg_id = msg_id
         self.msg_type = msg_type
@@ -188,12 +188,32 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
             final_msg_args['message'] = WcfMessage(
                 WcfMessageSeg.record(file_path))
         elif text.startswith("video:"):
-            # 发送一个音乐消息过去。
+            # 发送一个视频消息过去。
             file_path = text.split("video:")[1].strip()
             msg_store[msg_id_seq] = SimpleMsg(
                 msg_id_seq, "video", text, file_path, speaker_uid, None if not self.group_mode else "console_group")
             final_msg_args['message'] = WcfMessage(
                 WcfMessageSeg.video(file_path))
+        elif text.startswith("file:"):
+            # 发送一个文件消息过去。
+            file_path = text.split("file:")[1].strip()
+            msg_store[msg_id_seq] = SimpleMsg(
+                msg_id_seq, "file", text, file_path, speaker_uid, None if not self.group_mode else "console_group")
+            final_msg_args['message'] = WcfMessage(
+                WcfMessageSeg('file', {'file': file_path}))
+        elif text.startswith("link:"):
+            splited_text = text.split("link:")[1].strip()
+            splited_text = splited_text.split("#")
+            if len(splited_text) != 4:
+                asyncio.create_task(self._call_api(
+                    self.bot, "send_text", text="链接消息格式应当为>> link:title#desc#url#img_path", to_wxid=event.get_user_id()))
+                return
+            title, desc, url, img_path = splited_text
+            link_msg = WcfMessage(
+                WcfMessageSeg.share(title, desc, url, img_path))
+            final_msg_args['message'] = link_msg
+            msg_store[msg_id_seq] = SimpleMsg(
+                msg_id_seq, "link", text, link_msg[0].data, speaker_uid, None if not self.group_mode else "console_group")
         elif text.startswith("refer:"):
             # 发送一个引用消息过去，refer后面的就是id
             refer_content = text.split("refer:")[1].strip()
