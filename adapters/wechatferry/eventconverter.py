@@ -14,6 +14,7 @@ from .sqldb import database
 import html
 from .utils import downloader
 import shutil
+from .multi_msg_handlers import multi_msg_handlers
 
 """
 onebot11标准要求：https://github.com/botuniverse/onebot-11/blob/master/README.md
@@ -112,6 +113,10 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
                         break
                     else:
                         await asyncio.sleep(0.3)
+        elif subtype == WXSubType.WX_APPMSG_MUTIL:
+            # 合并消息，也就是聊天记录。。非常复杂。先尽量处理了我能处理的吧。
+            multi_message = extract_multi_message(root, login_wx_id, db)
+            args['message'] = multi_message
 
     if args.get('message') is None:
         return None
@@ -370,3 +375,25 @@ def extract_md5(content) -> Optional[str]:
     if 'md5="' not in content:
         return None
     content.split('md5="')[1].split('"')[0]
+
+
+async def extract_multi_message(root: ET.Element, login_wx_id: str, db: database) -> Message:
+    """
+    从合并消息中解析出消息内容。
+    """
+    recorditem = root.find('appmsg/recorditem')
+    if recorditem is None:
+        return None
+    nested_xml = ET.fromstring(recorditem.text)
+
+    datalist = nested_xml.findall('datalist/dataitem')
+    if datalist is None:
+        return None
+    
+    for dataitem in datalist:
+        datatype = dataitem.get('datatype')
+        handler = multi_msg_handlers.get(int(datatype))
+        if not handler:
+            logger.warning(f"Unsupported multi message type: {datatype}, dataitem: {dataitem}")
+            continue
+        msg = await handler(dataitem, login_wx_id, db)
