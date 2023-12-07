@@ -106,7 +106,7 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
                 else:
                     await asyncio.sleep(0.5)
 
-    if args['message'] is None:
+    if args.get('message') is None:
         return None
     
     args['original_message'] = args["message"]
