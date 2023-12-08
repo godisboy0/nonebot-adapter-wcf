@@ -108,7 +108,7 @@ class WxType(IntEnum):
     WX_MSG_SYSTEM = 10000
     """系统消息"""
     WX_MSG_REVOKE = 10002
-    """撤回消息，准确的说，这是‘系统消息’，撤回是其中之一"""
+    """撤回消息，准确的说，这是‘系统消息’，撤回是其中之一，只用来做撤回了，暂时就叫这名字吧。。"""
     
 
 class WXSubType(IntEnum):
