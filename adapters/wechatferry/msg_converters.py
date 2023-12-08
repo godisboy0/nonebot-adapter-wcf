@@ -220,6 +220,14 @@ async def file_msg_handler(root: ET.Element, msg: SimpleWxMsg, bot_wx_id: str, w
     has_override_msg = root.find(
         'appmsg/appattach/overwrite_newmsgid') is not None
     if has_override_msg:
+        if msg.extra is None:
+            # 可能是从引用消息那里来的。
+            file_name = None if root.find('appmsg/title') is None else root.find('appmsg/title').text
+            _file_path = db.query(
+                'select file_path from file_msg where msg_id_or_md5 = ?', "MSG_ID_" + str(msg.id))
+            file_path = None if not _file_path else _file_path[0][0]
+            if file_path:
+                return Message(MessageSegment('file', {'file': file_path, "name": file_name}))
         for _ in range(60):
             if os.path.exists(msg.extra):
                 file_path = os.path.join(file_dir, str(
@@ -227,7 +235,7 @@ async def file_msg_handler(root: ET.Element, msg: SimpleWxMsg, bot_wx_id: str, w
                 shutil.copyfile(msg.extra, file_path)
                 db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
                           'file', "MSG_ID_" + str(msg.id), file_path)
-                return Message(MessageSegment('file', {'file': file_path, "name": os.path.basename(file_path)}))
+                return Message(MessageSegment('file', {'file': file_path, "name": os.path.basename(msg.extra)}))
             else:
                 await asyncio.sleep(0.3)
     else:
