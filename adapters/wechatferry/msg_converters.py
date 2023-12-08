@@ -436,14 +436,13 @@ async def multi_handle_image_msg(data: ET.Element, login_bot_id: str, wcf: Wcf, 
     _pic_path = db.query('select file_path from file_msg where msg_id_or_md5 = ? or msg_id_or_md5 = ?',
                          "MSG_ID_" + str(fromnewmsgid), fullmd5)
     pic_path = None if not _pic_path else _pic_path[0][0]
-    data = {
+    return {
         'id': fromnewmsgid,
         'time': sourcetime,
         'sender': source_wxid,
         'sender_name': sourcename,
         'msg': Message(MessageSegment.image(pic_path)) if pic_path else None
     }
-    return data
 
 
 @multi_msg_handler(5, "链接消息")
