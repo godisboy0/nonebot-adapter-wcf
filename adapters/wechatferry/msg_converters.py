@@ -26,7 +26,7 @@ async def convert_to_bot_msg(msg: WxMsg, bot_wx_id: str, wcf: Wcf, db: database)
     else:
         logger.warning(f"Unknown msg type: {msg.type}")
         return None
-    
+
 
 MSG_CONV = TypeVar("MSG_CONV", bound=Callable[[
                    WxMsg, str, Wcf, database], Message])
@@ -220,7 +220,8 @@ async def file_msg_handler(root: ET.Element, msg: SimpleWxMsg, bot_wx_id: str, w
     has_override_msg = root.find(
         'appmsg/appattach/overwrite_newmsgid') is not None
     if has_override_msg:
-        file_name = None if root.find('appmsg/title') is None else root.find('appmsg/title').text
+        file_name = None if root.find(
+            'appmsg/title') is None else root.find('appmsg/title').text
         if msg.extra is None:
             # 可能是从引用消息那里来的。
             _file_path = db.query(
@@ -415,7 +416,7 @@ def multi_msg_handler(datatype: int, desc: str):
 
 
 @multi_msg_handler(2, "图片消息")
-def multi_handle_image_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
+async def multi_handle_image_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
     fromnewmsgid = data.find("fromnewmsgid").text       # 原始消息ID
     sourcename = data.find("sourcename").text           # 发送人昵称
     sourcetime = data.find("sourcetime").text           # 发送时间
@@ -434,7 +435,7 @@ def multi_handle_image_msg(data: ET.Element, login_bot_id: str, db: database) ->
 
 
 @multi_msg_handler(5, "链接消息")
-def multi_handle_link_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
+async def multi_handle_link_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
     fromnewmsgid = data.find("fromnewmsgid").text       # 原始消息ID
     sourcename = data.find("sourcename").text           # 发送人昵称
     sourcetime = data.find("sourcetime").text           # 发送时间
@@ -453,7 +454,7 @@ def multi_handle_link_msg(data: ET.Element, login_bot_id: str, db: database) -> 
 
 
 @multi_msg_handler(4, "视频消息")
-def multi_handle_video_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
+async def multi_handle_video_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
     fromnewmsgid = data.find("fromnewmsgid").text       # 原始消息ID
     sourcename = data.find("sourcename").text           # 发送人昵称
     sourcetime = data.find("sourcetime").text           # 发送时间
@@ -472,7 +473,7 @@ def multi_handle_video_msg(data: ET.Element, login_bot_id: str, db: database) ->
 
 
 @multi_msg_handler(8, "文件消息")
-def multi_handle_file_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
+async def multi_handle_file_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
     fromnewmsgid = data.find("fromnewmsgid").text       # 原始消息ID
     sourcename = data.find("sourcename").text           # 发送人昵称
     sourcetime = data.find("sourcetime").text           # 发送时间
@@ -491,7 +492,7 @@ def multi_handle_file_msg(data: ET.Element, login_bot_id: str, db: database) -> 
 
 
 @multi_msg_handler(1, "字面值消息")
-def multi_handle_text_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
+async def multi_handle_text_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
     """
     所有的文本消息，都是这个类型。包括：
     1. 文本消息；
