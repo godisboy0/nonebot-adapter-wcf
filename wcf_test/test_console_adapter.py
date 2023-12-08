@@ -159,6 +159,11 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
                 asyncio.create_task(self._call_api(
                     self.bot, "send_text", text=f"不再显示消息id", to_wxid=event.get_user_id()))
                 return
+            elif text.startswith(":set"):
+                # 这里是设置各种参数
+                asyncio.create_task(self._call_api(
+                    self.bot, "send_text", text="暂不支持的设置"))
+                return
         # 接下来是对消息的各种特殊处理，主要支持不同的消息格式。
 
         at_users = []
@@ -218,11 +223,12 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
             # 发送一个引用消息过去，refer后面的就是id
             refer_content = text.split("refer:")[1].strip()
             splited_refer_content = refer_content.split(" ")
-            if len(splited_refer_content) != 2:
+            if len(splited_refer_content) < 2:
                 asyncio.create_task(self._call_api(
                     self.bot, "send_text", text="引用消息格式应当为>> refer:refered_msg_id textmsg。\n输入:set showid true可以显示消息的msg_id", to_wxid=event.get_user_id()))
                 return
-            refer_msg, refer_text_msg = splited_refer_content
+            refer_msg = splited_refer_content[0]
+            refer_text_msg = " ".join(splited_refer_content[1:])
             msg_store[msg_id_seq] = SimpleMsg(
                 msg_id_seq, "refer", text, refer_msg, speaker_uid, None if not self.group_mode else "console_group")
             if not refer_msg.isdigit() or int(refer_msg) not in msg_store:
