@@ -4,9 +4,10 @@ from pydantic import Field, BaseModel
 class AdapterConfig(BaseModel):
     """wechatferry 配置类"""
 
+    root_user: str
     debug: bool = Field(default=True)
     """是否开启调试模式"""
-    db_path: str = Field(default="./data")  
+    db_path: str = Field(default="./data")
     """数据库路径，默认为当前运行路径下的 data 文件夹，该文件夹已经被 .gitignore 忽略"""
     echo_root_msg: bool = Field(default=False)
     """是否将 root_user 的信息直接做成json回传给root_user"""
