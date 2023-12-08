@@ -30,7 +30,7 @@ async def echo_root_msg_as_json_file(msg: WxMsg, wcf: Wcf):
         return
     
     import json    
-    file_path = os.path.join(base_dir, f'{msg.id}.json')
+    file_path = os.path.join(echo_temp_dir, f'{msg.id}.json')
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump({
             'is_self': msg._is_self,
