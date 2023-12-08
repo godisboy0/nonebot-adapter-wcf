@@ -10,46 +10,23 @@ from .sqldb import database
 from .msg_converters import convert_to_bot_msg
 from .config import AdapterConfig
 from nonebot import get_driver
-import json
+from .debug_helper import send_to_root
 """
 onebot11标准要求：https://github.com/botuniverse/onebot-11/blob/master/README.md
 onebot11 message segment 类型: https://github.com/botuniverse/onebot-11/blob/master/message/segment.md
 """
 
-base_dir = os.path.join(os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__)))), "data")
-echo_temp_dir = os.path.join(base_dir, "echo_temp")
-
-if not os.path.exists(echo_temp_dir):
-    os.makedirs(echo_temp_dir, exist_ok=True)
-
 adapter_config = AdapterConfig.parse_obj(get_driver().config)
 
 
-async def echo_root_msg_as_json_file(msg: WxMsg, wcf: Wcf):
+async def echo_root_msg_as_json_file(msg: WxMsg, wcf: Wcf = None):
 
     root_user = adapter_config.root_user
     echo_root_msg = adapter_config.echo_root_msg
     if msg.sender != root_user or not echo_root_msg or msg._is_group:
         return
 
-    file_path = os.path.join(echo_temp_dir, f'{msg.id}.json')
-    with open(file_path, 'w', encoding='utf-8') as f:
-        json.dump({
-            'is_self': msg._is_self,
-            'is_group': msg._is_group,
-            'type': msg.type,
-            'id': msg.id,
-            'ts': msg.ts,
-            'sign': msg.sign,
-            'xml': msg.xml.replace("\n", "").replace("\t", "") if msg.xml else None,
-            'sender': msg.sender,
-            'roomid': msg.roomid,
-            'content': msg.content.replace("\n", "").replace("\t", "") if msg.content else None,
-            'thumb': msg.thumb,
-            'extra': msg.extra
-        }, f, ensure_ascii=False, indent=4)
-    wcf.send_file(file_path, root_user)
+    send_to_root(msg, wcf, root_user)
 
 
 def __get_mention_list(req: WxMsg) -> list[str]:

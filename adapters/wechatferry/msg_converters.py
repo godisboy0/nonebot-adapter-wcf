@@ -419,12 +419,18 @@ def multi_msg_handler(datatype: int, desc: str):
         return wrapper
     return decorator
 
+@multi_msg_handler(17, "multi消息（嵌套）")
+async def multi_handle_image_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
+    pass
 
 @multi_msg_handler(2, "图片消息")
 async def multi_handle_image_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
-    fromnewmsgid = data.find("fromnewmsgid").text       # 原始消息ID
-    sourcename = data.find("srcChatname").text           # 发送人昵称
-    sourcetime = data.find("srcMsgCreateTime").text           # 发送时间
+    fromnewmsgid = data.find("fromnewmsgid").text if data.find(
+        "fromnewmsgid") else None                       # 原始消息ID, 可能没有
+    sourcename = data.find("sourcename").text           # 发送人昵称。
+    source_wxid = data.find("srcChatname").text if data.find(
+        "srcChatname") else None                        # 发送人wxid。在新版的微信中，这个字段是没有的。对隐私的保护更加强了。
+    sourcetime = data.find("srcMsgCreateTime").text     # 发送时间，这是时间戳。
 
     fullmd5 = data.find("fullmd5").text                 # 图片MD5
     _pic_path = db.query('select file_path from file_msg where msg_id_or_md5 = ? or msg_id_or_md5 = ?',
@@ -433,7 +439,8 @@ async def multi_handle_image_msg(data: ET.Element, login_bot_id: str, db: databa
     data = {
         'id': fromnewmsgid,
         'time': sourcetime,
-        'sender': sourcename,
+        'sender': source_wxid,
+        'sender_name': sourcename,
         'msg': Message(MessageSegment.image(pic_path)) if pic_path else None
     }
     return data
@@ -441,9 +448,12 @@ async def multi_handle_image_msg(data: ET.Element, login_bot_id: str, db: databa
 
 @multi_msg_handler(5, "链接消息")
 async def multi_handle_link_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
-    fromnewmsgid = data.find("fromnewmsgid").text       # 原始消息ID
-    sourcename = data.find("srcChatname").text           # 发送人昵称
-    sourcetime = data.find("srcMsgCreateTime").text           # 发送时间
+    fromnewmsgid = data.find("fromnewmsgid").text if data.find(
+        "fromnewmsgid") else None                       # 原始消息ID, 可能没有
+    sourcename = data.find("sourcename").text           # 发送人昵称。
+    source_wxid = data.find("srcChatname").text if data.find(
+        "srcChatname") else None                        # 发送人wxid。在新版的微信中，这个字段是没有的。对隐私的保护更加强了。
+    sourcetime = data.find("srcMsgCreateTime").text     # 发送时间，这是时间戳。
 
     weburlitem = data.find("weburlitem")                # 链接详情
     title = weburlitem.find("title").text               # 标题
@@ -451,7 +461,8 @@ async def multi_handle_link_msg(data: ET.Element, login_bot_id: str, db: databas
     return {
         'id': fromnewmsgid,
         'time': sourcetime,
-        'sender': sourcename,
+        'sender': source_wxid,
+        'sender_name': sourcename,
         'msg': Message(MessageSegment.share(
             link, title, None, None
         ))
@@ -460,9 +471,12 @@ async def multi_handle_link_msg(data: ET.Element, login_bot_id: str, db: databas
 
 @multi_msg_handler(4, "视频消息")
 async def multi_handle_video_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
-    fromnewmsgid = data.find("fromnewmsgid").text       # 原始消息ID
-    sourcename = data.find("srcChatname").text           # 发送人昵称
-    sourcetime = data.find("srcMsgCreateTime").text           # 发送时间
+    fromnewmsgid = data.find("fromnewmsgid").text if data.find(
+        "fromnewmsgid") else None                       # 原始消息ID, 可能没有
+    sourcename = data.find("sourcename").text           # 发送人昵称。
+    source_wxid = data.find("srcChatname").text if data.find(
+        "srcChatname") else None                        # 发送人wxid。在新版的微信中，这个字段是没有的。对隐私的保护更加强了。
+    sourcetime = data.find("srcMsgCreateTime").text     # 发送时间，这是时间戳。
 
     fullmd5 = data.find("fullmd5").text                 # 视频MD5
     _video_path = db.query('select file_path from file_msg where msg_id_or_md5 = ? or msg_id_or_md5 = ?',
@@ -472,16 +486,20 @@ async def multi_handle_video_msg(data: ET.Element, login_bot_id: str, db: databa
     return {
         'id': fromnewmsgid,
         'time': sourcetime,
-        'sender': sourcename,
+        'sender': source_wxid,
+        'sender_name': sourcename,
         'msg': Message(MessageSegment.video(video_path)) if video_path else None
     }
 
 
 @multi_msg_handler(8, "文件消息")
 async def multi_handle_file_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
-    fromnewmsgid = data.find("fromnewmsgid").text       # 原始消息ID
-    sourcename = data.find("srcChatname").text           # 发送人昵称
-    sourcetime = data.find("srcMsgCreateTime").text           # 发送时间
+    fromnewmsgid = data.find("fromnewmsgid").text if data.find(
+        "fromnewmsgid") else None                       # 原始消息ID, 可能没有
+    sourcename = data.find("sourcename").text           # 发送人昵称。
+    source_wxid = data.find("srcChatname").text if data.find(
+        "srcChatname") else None                        # 发送人wxid。在新版的微信中，这个字段是没有的。对隐私的保护更加强了。
+    sourcetime = data.find("srcMsgCreateTime").text     # 发送时间，这是时间戳。
 
     fullmd5 = data.find("fullmd5").text                 # 文件MD5
     datatitle = data.find("datatitle").text             # 文件名
@@ -491,7 +509,8 @@ async def multi_handle_file_msg(data: ET.Element, login_bot_id: str, db: databas
     return {
         'id': fromnewmsgid,
         'time': sourcetime,
-        'sender': sourcename,
+        'sender': source_wxid,
+        'sender_name': sourcename,
         'msg': Message(MessageSegment('file', {'file': file_path, "name": datatitle})) if file_path else None
     }
 
@@ -504,9 +523,12 @@ async def multi_handle_text_msg(data: ET.Element, login_bot_id: str, db: databas
     2. 语音消息；（实际上会转成一个 [Audio] 3" 文本）
     3. 引用消息：会显示引用的字面内容，并且包含 refermsgitem 信息。
     """
-    fromnewmsgid = data.find("fromnewmsgid").text if data.find("fromnewmsgid") else None      # 原始消息ID, 可能没有
-    sourcename = data.find("srcChatname").text           # 发送人昵称
-    sourcetime = data.find("srcMsgCreateTime").text           # 发送时间
+    fromnewmsgid = data.find("fromnewmsgid").text if data.find(
+        "fromnewmsgid") else None                       # 原始消息ID, 可能没有
+    sourcename = data.find("sourcename").text           # 发送人昵称。
+    source_wxid = data.find("srcChatname").text if data.find(
+        "srcChatname") else None                        # 发送人wxid。在新版的微信中，这个字段是没有的。对隐私的保护更加强了。
+    sourcetime = data.find("srcMsgCreateTime").text     # 发送时间，这是时间戳。
 
     refermsgitem = data.find("refermsgitem")            # 引用消息详情
     if refermsgitem is not None:
@@ -514,7 +536,6 @@ async def multi_handle_text_msg(data: ET.Element, login_bot_id: str, db: databas
         refered_id = refermsgitem.find("svrid").text        # 引用消息ID
         refered_content = refermsgitem.find(
             "content").text  # 引用消息内容，又是个新的嵌套xml
-        # datadesc = refermsgitem.find("datadesc").text
         refered_root = try_get_refer_root(refered_content)
 
         inner_msg = refer_msg_handler(refered_root, SimpleWxMsg(
@@ -522,7 +543,8 @@ async def multi_handle_text_msg(data: ET.Element, login_bot_id: str, db: databas
         return {
             'id': fromnewmsgid,
             'time': sourcetime,
-            'sender': sourcename,
+            'sender': source_wxid,
+            'sender_name': sourcename,
             'msg': inner_msg
         }
     else:  # 语音消息 或者 纯文本消息
@@ -530,7 +552,8 @@ async def multi_handle_text_msg(data: ET.Element, login_bot_id: str, db: databas
         return {
             'id': fromnewmsgid,
             'time': sourcetime,
-            'sender': sourcename,
+            'sender': source_wxid,
+            'sender_name': sourcename,
             'msg': Message(MessageSegment.text(datadesc))
         }
 
