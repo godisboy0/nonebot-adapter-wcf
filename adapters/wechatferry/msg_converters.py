@@ -282,6 +282,13 @@ async def refer_msg_handler(root: ET.Element, msg: SimpleWxMsg, bot_wx_id: str, 
 
     # 这是被引用的消息
     refered = root.find('appmsg/refermsg')
+    if refered is None:
+        # 可能是一个被引用的引用消息，会丢失继续引用的数据。这时当做一个普通引用节点返回就行了。
+        return Message(MessageSegment('wx_refer', {
+            'content': content,
+            'refered': None
+        }))
+
     refered_msg_id = int(refered.find('svrid').text)
     refered_msg_type = int(refered.find('type').text)
     refered_speaker_id = refered.find('fromusr').text
