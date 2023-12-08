@@ -256,7 +256,7 @@ def try_get_file_path_from_db(speaker_id: str, bot_wx_id: str, refered_msg_id: i
     msg_id_or_md5 = "MSG_ID_" + \
         str(refered_msg_id) if not is_bot_sent else extract_md5(redered_content)
     files = db.query(
-        'select file_path from file_msg where type = "pic" and msg_id_or_md5 = ?', msg_id_or_md5)
+        'select file_path from file_msg where msg_id_or_md5 = ?', msg_id_or_md5)
     if files:
         return files[0][0]
     return None
