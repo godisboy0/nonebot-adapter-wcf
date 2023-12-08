@@ -12,13 +12,25 @@ echo_temp_dir = os.path.join(base_dir, "echo_temp")
 if not os.path.exists(echo_temp_dir):
     os.makedirs(echo_temp_dir, exist_ok=True)
 
+_root_user = None
+_wcf = None
 
 def send_to_root(msg: Union[Any, WxMsg], wcf: Wcf = None, root_user: str = None):
     from nonebot import get_adapter, get_driver
+    global _root_user
+    global _wcf
     if wcf is None:
-        wcf: Wcf = get_adapter().wcf
+        if _wcf:
+            wcf = _wcf
+        else:   
+            wcf: Wcf = get_adapter('wechatferry').wcf
+            _wcf = wcf
     if root_user is None:
-        root_user = AdapterConfig.parse_obj(get_driver().config).root_user
+        if _root_user:
+            root_user = _root_user
+        else:
+            root_user = AdapterConfig.parse_obj(get_driver().config).root_user
+            _root_user = root_user
 
     if isinstance(msg, WxMsg):
         file_str = json.dumps({
