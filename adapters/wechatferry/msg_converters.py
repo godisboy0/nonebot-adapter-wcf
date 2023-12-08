@@ -385,9 +385,14 @@ async def multi_msg_handler(root: ET.Element, msg: SimpleWxMsg, bot_wx_id: str, 
             logger.warning(
                 f"Unsupported multi message type: {datatype}, dataitem: {dataitem}")
             continue
-        single_data = await handler(dataitem, bot_wx_id, db)
-        if single_data is not None:
-            msg_list.append(single_data)
+        try:
+            single_data = await handler(dataitem, bot_wx_id, db)
+            if single_data is not None:
+                msg_list.append(single_data)
+        except Exception as e:
+            logger.error(
+                f"Error in multi message handler: {datatype}, dataitem: {dataitem}, error: {e}")
+            continue
 
     return Message(MessageSegment('wx_multi', {'msg_list': msg_list}))
 
@@ -418,8 +423,8 @@ def multi_msg_handler(datatype: int, desc: str):
 @multi_msg_handler(2, "图片消息")
 async def multi_handle_image_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
     fromnewmsgid = data.find("fromnewmsgid").text       # 原始消息ID
-    sourcename = data.find("sourcename").text           # 发送人昵称
-    sourcetime = data.find("sourcetime").text           # 发送时间
+    sourcename = data.find("srcChatname").text           # 发送人昵称
+    sourcetime = data.find("srcMsgCreateTime").text           # 发送时间
 
     fullmd5 = data.find("fullmd5").text                 # 图片MD5
     _pic_path = db.query('select file_path from file_msg where msg_id_or_md5 = ? or msg_id_or_md5 = ?',
@@ -437,8 +442,8 @@ async def multi_handle_image_msg(data: ET.Element, login_bot_id: str, db: databa
 @multi_msg_handler(5, "链接消息")
 async def multi_handle_link_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
     fromnewmsgid = data.find("fromnewmsgid").text       # 原始消息ID
-    sourcename = data.find("sourcename").text           # 发送人昵称
-    sourcetime = data.find("sourcetime").text           # 发送时间
+    sourcename = data.find("srcChatname").text           # 发送人昵称
+    sourcetime = data.find("srcMsgCreateTime").text           # 发送时间
 
     weburlitem = data.find("weburlitem")                # 链接详情
     title = weburlitem.find("title").text               # 标题
@@ -456,8 +461,8 @@ async def multi_handle_link_msg(data: ET.Element, login_bot_id: str, db: databas
 @multi_msg_handler(4, "视频消息")
 async def multi_handle_video_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
     fromnewmsgid = data.find("fromnewmsgid").text       # 原始消息ID
-    sourcename = data.find("sourcename").text           # 发送人昵称
-    sourcetime = data.find("sourcetime").text           # 发送时间
+    sourcename = data.find("srcChatname").text           # 发送人昵称
+    sourcetime = data.find("srcMsgCreateTime").text           # 发送时间
 
     fullmd5 = data.find("fullmd5").text                 # 视频MD5
     _video_path = db.query('select file_path from file_msg where msg_id_or_md5 = ? or msg_id_or_md5 = ?',
@@ -475,8 +480,8 @@ async def multi_handle_video_msg(data: ET.Element, login_bot_id: str, db: databa
 @multi_msg_handler(8, "文件消息")
 async def multi_handle_file_msg(data: ET.Element, login_bot_id: str, db: database) -> Dict[str, Any]:
     fromnewmsgid = data.find("fromnewmsgid").text       # 原始消息ID
-    sourcename = data.find("sourcename").text           # 发送人昵称
-    sourcetime = data.find("sourcetime").text           # 发送时间
+    sourcename = data.find("srcChatname").text           # 发送人昵称
+    sourcetime = data.find("srcMsgCreateTime").text           # 发送时间
 
     fullmd5 = data.find("fullmd5").text                 # 文件MD5
     datatitle = data.find("datatitle").text             # 文件名
@@ -499,9 +504,9 @@ async def multi_handle_text_msg(data: ET.Element, login_bot_id: str, db: databas
     2. 语音消息；（实际上会转成一个 [Audio] 3" 文本）
     3. 引用消息：会显示引用的字面内容，并且包含 refermsgitem 信息。
     """
-    fromnewmsgid = data.find("fromnewmsgid").text       # 原始消息ID
-    sourcename = data.find("sourcename").text           # 发送人昵称
-    sourcetime = data.find("sourcetime").text           # 发送时间
+    fromnewmsgid = data.find("fromnewmsgid").text if data.find("fromnewmsgid") else None      # 原始消息ID, 可能没有
+    sourcename = data.find("srcChatname").text           # 发送人昵称
+    sourcetime = data.find("srcMsgCreateTime").text           # 发送时间
 
     refermsgitem = data.find("refermsgitem")            # 引用消息详情
     if refermsgitem is not None:
