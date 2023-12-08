@@ -15,7 +15,6 @@ from .bot import Bot
 from .event import Event, GroupMessageEvent
 from .config import AdapterConfig
 from wcferry import Wcf, WxMsg
-from .eventconverter import convert_to_event
 from .exception import WcfInitFailedException
 from .utils import logger
 from .api import API
@@ -79,6 +78,7 @@ class Adapter(BaseAdapter):
         """将wcf消息转换为Event"""
         if not msg:
             return None
+        from .eventconverter import convert_to_event
         return await convert_to_event(msg, self.login_bot_id, self.wcf, self.db)
 
     @classmethod

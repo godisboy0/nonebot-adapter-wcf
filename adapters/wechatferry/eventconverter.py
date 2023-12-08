@@ -8,7 +8,9 @@ from nonebot.utils import escape_tag
 import os
 from .sqldb import database
 from .msg_converters import convert_to_bot_msg
-
+from .config import AdapterConfig
+from nonebot import get_driver
+import json
 """
 onebot11标准要求：https://github.com/botuniverse/onebot-11/blob/master/README.md
 onebot11 message segment 类型: https://github.com/botuniverse/onebot-11/blob/master/message/segment.md
@@ -21,15 +23,16 @@ echo_temp_dir = os.path.join(base_dir, "echo_temp")
 if not os.path.exists(echo_temp_dir):
     os.makedirs(echo_temp_dir, exist_ok=True)
 
+adapter_config = AdapterConfig.parse_obj(get_driver().config)
+
 
 async def echo_root_msg_as_json_file(msg: WxMsg, wcf: Wcf):
-    from nonebot import get_driver
-    root_user = get_driver().config.root_user
-    echo_root_msg = get_driver().config.echo_root_msg
+
+    root_user = adapter_config.root_user
+    echo_root_msg = adapter_config.echo_root_msg
     if msg.sender != root_user or not echo_root_msg or msg._is_group:
         return
-    
-    import json    
+
     file_path = os.path.join(echo_temp_dir, f'{msg.id}.json')
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump({
@@ -64,14 +67,14 @@ async def convert_to_event(msg: WxMsg, login_wx_id: str, wcf: Wcf, db: database)
     logger.debug(f"Converting message to event: {escape_tag(str(msg))}")
     if not msg or msg.type == WxType.WX_MSG_HEARTBEAT:
         return None
-    
+
     await echo_root_msg_as_json_file(msg, wcf)
 
     args = {}
     onebot_msg: Message = await convert_to_bot_msg(msg, login_wx_id, wcf, db)
     if onebot_msg is None:
         return None
-    
+
     args['message'] = onebot_msg
     args['original_message'] = args["message"]
 
