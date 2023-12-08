@@ -104,7 +104,7 @@ async def download_video(msg: WxMsg, wcf: Wcf) -> str:
 
 @msg_converter(WxType.WX_MSG_VIDEO, "视频消息")
 async def video_msg_handler(msg: WxMsg, bot_wx_id: str, wcf: Wcf, db: database) -> Message:
-    video_path = await asyncio.get_event_loop().run_in_executor(download_executor, download_video, msg, wcf)
+    video_path = await download_video(msg, wcf)
     if video_path:
         db.insert('insert into file_msg (type, msg_id_or_md5, file_path) values (?, ?, ?)',
                   'video', "MSG_ID_" + str(msg.id), video_path)
