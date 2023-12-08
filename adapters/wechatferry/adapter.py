@@ -19,7 +19,7 @@ from .exception import WcfInitFailedException
 from .utils import logger
 from .api import API
 from .sqldb import database
-from .message import Message
+from .message import Message, MessageSegment
 
 rsv_executor = ThreadPoolExecutor(max_workers=1)
 
@@ -218,4 +218,12 @@ class Adapter(BaseAdapter):
 def jsonfyMsg(message: Message):
     import json
     datas = [seg.data for seg in message]
-    return json.dumps(datas, ensure_ascii=False, indent=2)
+    def message_segment_to_dict(obj):
+        if isinstance(obj, MessageSegment):
+            return {
+                'type': obj.type,
+                'data': obj.data
+            }
+        raise TypeError(f'Object of type {type(obj).__name__} is not JSON serializable')
+    
+    return json.dumps(datas, ensure_ascii=False, default=message_segment_to_dict)
