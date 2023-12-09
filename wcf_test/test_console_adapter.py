@@ -22,6 +22,7 @@ from adapters.wechatferry.event import (
 from adapters.wechatferry.message import MessageSegment as WcfMessageSeg, Message as WcfMessage
 from adapters.wechatferry.basemodel import UserInfo as WcfUserInfo
 from typing import Literal
+from adapters.wechatferry.utils import logger
 
 BOT_ID = "wechatferry_console"
 
@@ -305,6 +306,9 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
             return WcfUserInfo(wx_id=user_id, code=user_id, wx_name=user_id, gender="😝")
         elif api == "get_alias_in_chatroom":
             return data['user_id']
+        else:
+            logger.warning(f"不支持的api: {api}")
+            return
 
         await self._frontend.call("send_msg", new_data)
 

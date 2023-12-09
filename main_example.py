@@ -18,6 +18,7 @@ nonebot.load_builtin_plugins("echo")  # 内置插件
 nonebot.load_plugin("wcf_test.plugins.test_plugin")  # 第三方插件
 # nonebot.load_plugins("plugins")  # 本地插件，测试用。
 # nonebot.load_plugins("awesome_bot/plugins")  # 本地插件
+nonebot.load_plugin("builtin_plugins.auto_help")  # 自动帮助插件
 
 if __name__ == "__main__":
     nonebot.run()
