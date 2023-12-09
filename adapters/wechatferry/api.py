@@ -74,6 +74,25 @@ class API:
         md5_executor.submit(record_md5, file, self.config)
         self.wcf.send_file(path=file, receiver=to_wxid)
 
+    def send_wx_pat(self, to_wxid: str, **kwargs: dict[str, Any]) -> None:
+        """发送拍一拍消息，这里wxid是group_id"""
+        if kwargs.get('user_id') and to_wxid.endswith("@chatroom"):
+            self.wcf.send_pat_msg(to_wxid, kwargs.get('user_id'))
+        else:
+            logger.error("发送拍一拍消息失败，缺少 user_id 或者 to_wxid 不是群聊")
+
+    def send_link(self, to_wxid: str, **kwargs: dict[str, Any]) -> None:
+        """发送分享链接消息"""
+        self.wcf.send_rich_text(
+            kwargs.get('name'),
+            kwargs.get('account'),
+            kwargs.get('title'),
+            kwargs.get('desc'),
+            kwargs.get('url'),
+            kwargs.get('thumburl'),
+            to_wxid
+        )
+
     def get_user_info(self, user_id: str, **kwargs: dict[str, Any]) -> UserInfo:
         """查询用户信息"""
         if not user_id:
