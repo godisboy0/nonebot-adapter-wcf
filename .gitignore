@@ -6,6 +6,7 @@ main.py
 /test.ipynb
 /error.txt
 /.rst
+/searched**
 
 /data/**
 # Byte-compiled / optimized / DLL files

@@ -75,8 +75,8 @@ class API:
         self.wcf.send_file(path=file, receiver=to_wxid)
 
     def send_wx_pat(self, to_wxid: str, **kwargs: dict[str, Any]) -> None:
-        """发送拍一拍消息，这里wxid是group_id"""
-        if kwargs.get('user_id') and to_wxid.endswith("@chatroom"):
+        """发送拍一拍消息"""
+        if kwargs.get('user_id'):
             self.wcf.send_pat_msg(to_wxid, kwargs.get('user_id'))
         else:
             logger.error("发送拍一拍消息失败，缺少 user_id 或者 to_wxid 不是群聊")

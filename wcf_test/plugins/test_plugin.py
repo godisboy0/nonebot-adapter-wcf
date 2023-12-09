@@ -39,5 +39,8 @@ async def handle_test(event: MessageEvent, message: BaseMessage = CommandArg()):
         })))
     elif message.extract_plain_text() == 'pat':
         await test.finish(message=Message(MessageSegment('wx_pat', {'user_id': event.user_id})))
+    elif message.extract_plain_text() == 'gif':
+        # 没有用。。是错的。
+        await test.finish(message=Message(MessageSegment('emotion', {'file': "./wcf_test/data/1702117541775.gif"})))
     else:
         await test.finish(message=message)
