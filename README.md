@@ -14,7 +14,7 @@
 
 3. 新增了链接信息。是标准的 [onebot链接分享segment](https://github.com/botuniverse/onebot-11/blob/master/message/segment.md#%E9%93%BE%E6%8E%A5%E5%88%86%E4%BA%AB)
 
-4. 新增了聊天记录的消息格式。见[聊天记录](#聊天记录)
+4. 新增了聊天记录的消息格式。见[聊天记录](#聊天记录消息)
 
    + 已知问题：
 
