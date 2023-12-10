@@ -44,6 +44,7 @@ from adapters.wechatferry.utils import logger
 from nonebot.typing import T_State
 from .config import HelperConfig
 from nonebot import get_driver
+import re
 
 help_bot = on_command("help", rule=to_me(), aliases={
                       '帮助', "菜单"}, priority=180, block=True)
@@ -51,19 +52,157 @@ help_bot = on_command("help", rule=to_me(), aliases={
 
 config: HelperConfig = HelperConfig.parse_obj(get_driver().config)
 
+weizhi_index = 0
+
+
+class PluginInfo:
+    def __init__(self, name: str, help_info: str, sub_cmds: dict[str, str], auth_method: callable):
+        self.name = name
+        self.help_info = help_info
+        self.sub_cmds = sub_cmds
+        self.auth_method = auth_method
+
+    def __str__(self) -> str:
+        return f"{self.name}: {self.help_info}\n子命令：{self.sub_cmds}"
+
+    def __repr__(self) -> str:
+        return str(self)
+
+
+plugin_info_dict: dict[str, PluginInfo] = None
+
+
 @help_bot.handle()
 async def handle_help(event: MessageEvent, state: T_State):
     mod_list = [elm.module for elm in get_loaded_plugins()]
     msg_list: list[str] = []
+    global plugin_info_dict
+    if plugin_info_dict is None:
+        await build_plugin_info_dict(mod_list)
+
+    input_cmd = re.sub(r"^/(help|帮助|菜单)", "", event.get_plaintext()).strip()
+    if not input_cmd:
+        # /help
+        for info in plugin_info_dict.values():
+            authed = await check_auth(event, info.auth_method)
+            if authed:
+                msg_list.append(info)
+        if not msg_list:
+            await help_bot.finish("这里是一片荒漠，除了孤独什么也没有！")
+        state["msg_list"] = msg_list
+    elif input_cmd in plugin_info_dict:
+        # /help drawer
+        await help_sub_cmd(event, input_cmd)
+    else:
+        await help_bot.finish(f"米有找到 {input_cmd} 呢，试试 /help 再看看吧！")
+
+
+@help_bot.handle()
+async def send_help(event: MessageEvent, state: T_State):
+    msg_list = state["msg_list"]
+    # 3条一组，接受翻页。
+    cmd = event.get_plaintext().strip()
+    if state.get('page') is None:
+        state['page'] = 0
+    state['total_page'] = len(msg_list) // 3  + (1 if len(msg_list) % 3 != 0 else 0)
+
+    if cmd == "n":
+        if state['page'] + 1 < state['total_page']:
+            state['page'] += 1
+        else:
+            await help_bot.reject("已经是最后一页了！")
+    elif cmd == "p":
+        if state['page'] > 0:
+            state['page'] -= 1
+        else:
+            await help_bot.reject("已经是第一页了！")
+    elif cmd.isdigit():
+        index = int(cmd)
+        if index > 0 and index <= len(msg_list):
+            await help_sub_cmd(event, msg_list[index - 1].name)
+        else:
+            await help_bot.reject("哎呀，数字太大了，我接受不了！")
+    elif cmd == "q":
+        await help_bot.finish("再见！")
+
+    start_index = state['page'] * 3
+    end_index = start_index + 3
+    msg = "\n".join(
+        f"{i+start_index+1}. {item.help_info}" for i, item in enumerate(msg_list[start_index:end_index])
+    )
+
+    if state['total_page'] != 1:
+        msg += f"\n第{state['page']}/{state['total_page']}页 p,n翻页,q退出,序号看详情"
+    await help_bot.reject(msg)
+
+
+async def help_sub_cmd(event: MessageEvent, input_cmd: str):
+    info = plugin_info_dict[input_cmd]
+    authed = await check_auth(event, info.auth_method)
+    if not authed:
+        await help_bot.finish(f"米有找到 {input_cmd} 呢，试试 /help 再看看吧！")
+    if not info.sub_cmds:
+        await help_bot.finish(f"{info.name} 没有子命令哦！")
+    else:
+        await help_bot.finish(
+            f"{info.name} 的子命令有：\n" + "\n".join([f"{x}：{y}" for x, y in info.sub_cmds.items()]))
+
+
+async def build_plugin_info_dict(mod_list: list[ModuleType]):
+    global plugin_info_dict
+    plugin_info_dict = {}
     for mod in mod_list:
         if mod.__name__ in config.not_showed_plugin_names:
             continue
         if hasattr(mod, "__plugin_meta__"):
-            msg: list[str] = await build_from_meta(event, mod, mod.__plugin_meta__)
-            if msg:
-                msg_list.extend(msg)
+            meta = mod.__plugin_meta__
+            if meta.extra.get("disable_help", False):
+                continue
+            elif "help_info" in meta.extra:
+                await build_plugin_info_from_help_info(mod, meta, meta.extra["help_info"])
+            else:
+                await build_plugin_info_from_usage(mod, meta)
 
-    await help_bot.finish("\n".join(msg_list))
+
+async def build_plugin_info_from_help_info(mod: ModuleType, meta: PluginMetadata, help_info: List[dict]):
+    for info in help_info:
+        auth_method = info.get("auth_method")
+        if isinstance(auth_method, str) and hasattr(mod, auth_method):
+            auth_method = getattr(mod, auth_method)
+
+        auth_method = auth_method or __auth_pass_method
+
+        global weizhi_index
+        weizhi_index += 1
+        name = info.get("name", meta.name) or ("未知" + str(weizhi_index))
+        desc = info.get("desc", meta.description)
+        cmds = info.get("cmds", [])
+        if not name and not desc and not cmds:
+            continue
+        sub_cmds = {x: y for x, y in info.get("sub_cmds", [])}
+
+        plugin_info_dict[name] = PluginInfo(
+            name,
+            f"{name or '未知'}{'：'+ desc if desc else ''}\n命令：{' '.join(cmds) or '未知'}",
+            sub_cmds,
+            auth_method
+        )
+
+
+async def __auth_pass_method(user_id: int, room_id: int):
+    return True
+
+
+async def build_plugin_info_from_usage(mod: ModuleType, meta: PluginMetadata):
+    global weizhi_index
+    weizhi_index += 1
+    name = meta.name or ("未知" + str(weizhi_index))
+    plugin_info_dict[name] = PluginInfo(
+        name,
+        f"{meta.name or '未知'}{'：'+ meta.description if meta.description else ''}\n命令：{meta.usage or '未知'}",
+        {},
+        __auth_pass_method
+    )
 
 
 async def build_from_meta(event: MessageEvent, mod: ModuleType, meta: PluginMetadata) -> list[str]:
@@ -72,7 +211,7 @@ async def build_from_meta(event: MessageEvent, mod: ModuleType, meta: PluginMeta
     elif "help_info" in meta.extra:
         return await build_from_help_info(event, mod, meta, meta.extra["help_info"])
     else:
-        return [await build_from_usage(meta.name, meta.description, meta.usage, meta.homepage)]
+        return [await build_from_usage(meta.name, meta.description, meta.usage)]
 
 
 async def build_from_help_info(event: MessageEvent, mod: ModuleType, meta: PluginMetadata, help_info: List[dict]) -> list[str]:
@@ -80,31 +219,24 @@ async def build_from_help_info(event: MessageEvent, mod: ModuleType, meta: Plugi
     for info in help_info:
         authed = await check_auth(event, mod, info)
         if authed:
-            name = info.get("name", meta.name)
+            name = info.get("name", meta.name) or "未知"
             desc = info.get("desc", meta.description)
             cmds = info.get("cmds", [])
             if not name and not desc and not cmds:
                 continue
-            msg_list.append(f"{name or '未知'}: {desc or '未知功能'}\n命令：{cmds or '未知'}\n")
+            msg_list.append(
+                f"{name or '未知'}{'：'+ desc if desc else ''}\n命令：{' '.join(cmds) or '未知'}\n")
     return msg_list
 
 
-async def build_from_usage(name: str, desc: str, usage: str, homepage: str) -> str:
+async def build_from_usage(name: str, desc: str, usage: str) -> dict[str, str]:
     msg = f"{name or '未知'}: {desc or '未知功能'}\n用法：{usage or '未知'}\n"
-    if homepage:
-        msg += f"主页：{homepage}\n"
     return msg
 
 
-async def check_auth(event: MessageEvent, mod: ModuleType, info: dict) -> bool:
+async def check_auth(event: MessageEvent, auth_method: callable) -> bool:
     try:
-        if "auth_method" in info:
-            auth_method = info["auth_method"]
-            if isinstance(auth_method, str):
-                auth_method = getattr(mod, auth_method)
-            return await auth_method(event.user_id, event.group_id if isinstance(event, GroupMessageEvent) else None)
-        else:
-            return True
+        return await auth_method(event.user_id, event.group_id if isinstance(event, GroupMessageEvent) else None)
     except Exception as e:
         logger.error(f"check auth failed: {e}, default to True")
         return True
