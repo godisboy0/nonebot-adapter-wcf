@@ -93,6 +93,18 @@ class API:
             to_wxid
         )
 
+    def send_share(self, to_wxid: str, **kwargs: dict[str, Any]) -> None:
+        """发送分享链接消息"""
+        self.wcf.send_rich_text(
+            kwargs.get('name'),     # 必然是None
+            kwargs.get('account'),  # 必然是None
+            kwargs.get('title'),
+            kwargs.get('content'),
+            kwargs.get('url'),
+            kwargs.get('image'),
+            to_wxid
+        )
+
     def get_user_info(self, user_id: str, **kwargs: dict[str, Any]) -> UserInfo:
         """查询用户信息"""
         if not user_id:

@@ -6,6 +6,13 @@
 
 # 重要更新内容
 
+## 2023-12-10
+
+1. 底层 wcferry 依赖版本更新到了 [v39.0.10 (2023.12.08)](https://github.com/lich0821/WeChatFerry#v39010-20231208) 可使用 `pip install --upgrade wcferry` 更新。不更新会出错。
+2. 新增了拍一拍能力，直接发送[拍一拍消息](#拍一拍)即可。
+3. 新增了发送链接能力，直接发送[链接消息](#链接消息)即可。
+4. 新增了一个根据 nonebot 的\_\__plugin\_meta\_\_字段来自动生成帮助消息的通用插件，这下就不用费心写插件的帮助消息了。
+
 ## 2023-12-8
 
 1. 新增了更加丰富的引用消息格式。
@@ -43,7 +50,7 @@
 
 ## 2023-12-4
 
-底层 wcferry 依赖版本更新到了 [v39.0.7 (2023.12.03)](v39.0.7 "2023.12.03") 可使用 `pip install --upgrade wcferry` 更新。不更新会出错。
+底层 wcferry 依赖版本更新到了 [v39.0.7 (2023.12.03)](https://github.com/lich0821/WeChatFerry#v3907-20231203) 可使用 `pip install --upgrade wcferry` 更新。不更新会出错。
 
 + 新增了下载图片能力，现在图片消息会被自动下载和发送。格式同标准的 onebot 11 image 格式
 + 新增了下载语音能力，会将语音转为mp3下载。格式同标准的 onebot11 record 格式
@@ -274,6 +281,35 @@ multi_msg = Message(MessageSegment('wx_multi', {'msg_list': msg_list}))
 ```
 
 文本消息、文件消息、引用消息。都是一样的。
+
+## 拍一拍
+
+```json
+{
+  "type": "wx_pat",
+  "data": {
+    "user_id": "user_id"	// 要拍的人，私聊也要传。
+  }
+}
+```
+
+## 链接消息
+
+之所以不用onebot官方的share，是因为缺少几个字段。当然onebot标准的share消息也能处理。
+
+```json
+{
+  "type": "link",
+  "data": {
+      "url": "https://www.baidu.com",
+      "title": "百度一下，你就知道",
+      "desc": "百度两下，你就知道",
+      "thumburl": "https://www.baidu.com/img/flexible/logo/pc/result.png",
+      "name": "百度",
+      "account": "gh-"		// 公众号的id，可以带小头像
+  }
+}
+```
 
 ## bot方法扩展
 

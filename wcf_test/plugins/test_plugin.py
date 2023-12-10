@@ -35,7 +35,7 @@ async def handle_test(event: MessageEvent, message: BaseMessage = CommandArg()):
             "desc": "百度两下，你就知道",
             "thumburl": "https://www.baidu.com/img/flexible/logo/pc/result.png",
             "name": "百度",
-            # "account": "..."
+            "account": "gh_hellokitty",
         })))
     elif message.extract_plain_text() == 'pat':
         await test.finish(message=Message(MessageSegment('wx_pat', {'user_id': event.user_id})))
