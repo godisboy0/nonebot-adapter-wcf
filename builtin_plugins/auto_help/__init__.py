@@ -103,16 +103,16 @@ async def send_help(event: MessageEvent, state: T_State):
     # 3条一组，接受翻页。
     cmd = event.get_plaintext().strip()
     if state.get('page') is None:
-        state['page'] = 0
+        state['page'] = 1
     state['total_page'] = len(msg_list) // 3  + (1 if len(msg_list) % 3 != 0 else 0)
 
     if cmd == "n":
-        if state['page'] + 1 < state['total_page']:
+        if state['page'] + 1 <= state['total_page']:
             state['page'] += 1
         else:
             await help_bot.reject("已经是最后一页了！")
     elif cmd == "p":
-        if state['page'] > 0:
+        if state['page'] > 1:
             state['page'] -= 1
         else:
             await help_bot.reject("已经是第一页了！")
@@ -125,7 +125,7 @@ async def send_help(event: MessageEvent, state: T_State):
     elif cmd == "q":
         await help_bot.finish("再见！")
 
-    start_index = state['page'] * 3
+    start_index = state['page'] * 3 - 3
     end_index = start_index + 3
     msg = "\n".join(
         f"{i+start_index+1}. {item.help_info}" for i, item in enumerate(msg_list[start_index:end_index])
