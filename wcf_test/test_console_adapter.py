@@ -23,6 +23,7 @@ from adapters.wechatferry.message import MessageSegment as WcfMessageSeg, Messag
 from adapters.wechatferry.basemodel import UserInfo as WcfUserInfo
 from typing import Literal
 from adapters.wechatferry.utils import logger
+import time
 
 BOT_ID = "wechatferry_console"
 
@@ -36,14 +37,15 @@ onebot11 message segment 类型: https://github.com/botuniverse/onebot-11/blob/m
 
 class SimpleMsg:
 
-    def __init__(self, msg_id: int, msg_type: Literal["text", "image", "voice", "refer", "video", "file", "link"], 
-                 raw_msg: str, msg: str, speaker_id, room_id=None):
+    def __init__(self, msg_id: int, msg_type: Literal["text", "image", "voice", "refer", "video", "file", "link"],
+                 raw_msg: str, msg: WcfMessage, speaker_id, room_id=None, _time=time.time()):
         self.msg_id = msg_id
         self.msg_type = msg_type
         self.raw_msg = raw_msg
         self.msg = msg
         self.room_id = room_id
         self.speaker_id = speaker_id
+        self.time = _time
 
 
 speaker_uid = "User"
@@ -100,7 +102,6 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
             self._frontend.exit()
         if self._task:
             await self._task
-
 
     def post_event(self, event: Event) -> None:
         # 功能越来越多，改成更清晰的流水账写法吧= =
@@ -171,42 +172,44 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
         msg_id_seq += 1
         if self.show_msg_id:
             asyncio.create_task(self._call_api(
-                    self.bot, "send_text", text=f"发出的消息id: {msg_id_seq}", to_wxid=event.get_user_id()))
+                self.bot, "send_text", text=f"发出的消息id: {msg_id_seq}", to_wxid=event.get_user_id()))
         final_msg_args = {}
         if '@' in text:
             # @符号以后的都认为是另一个用户名
             at_users = [x for x in text.split('@')[1:] if x]
             text = text.split('@')[0].strip()
 
-
         if text.startswith("image:"):
             # 发送一个图片消息过去。
             file_path = text.split("image:")[1].strip()
-            msg_store[msg_id_seq] = SimpleMsg(
-                msg_id_seq, "image", text, file_path, speaker_uid, None if not self.group_mode else "console_group")
-            final_msg_args['message'] = WcfMessage(
+            image_msg = WcfMessage(
                 WcfMessageSeg.image(file_path))
+            msg_store[msg_id_seq] = SimpleMsg(
+                msg_id_seq, "image", text, image_msg, speaker_uid, None if not self.group_mode else "console_group")
+            final_msg_args['message'] = image_msg
         elif text.startswith("voice:"):
             # 发送一个音频消息过去。
             file_path = text.split("voice:")[1].strip()
-            msg_store[msg_id_seq] = SimpleMsg(
-                msg_id_seq, "voice", text, file_path, speaker_uid, None if not self.group_mode else "console_group")
-            final_msg_args['message'] = WcfMessage(
+            voice_msg = WcfMessage(
                 WcfMessageSeg.record(file_path))
+            msg_store[msg_id_seq] = SimpleMsg(
+                msg_id_seq, "voice", text, voice_msg, speaker_uid, None if not self.group_mode else "console_group")
+            final_msg_args['message'] = voice_msg
         elif text.startswith("video:"):
             # 发送一个视频消息过去。
             file_path = text.split("video:")[1].strip()
-            msg_store[msg_id_seq] = SimpleMsg(
-                msg_id_seq, "video", text, file_path, speaker_uid, None if not self.group_mode else "console_group")
-            final_msg_args['message'] = WcfMessage(
+            video_msg = WcfMessage(
                 WcfMessageSeg.video(file_path))
+            msg_store[msg_id_seq] = SimpleMsg(
+                msg_id_seq, "video", text, video_msg, speaker_uid, None if not self.group_mode else "console_group")
         elif text.startswith("file:"):
             # 发送一个文件消息过去。
             file_path = text.split("file:")[1].strip()
+            file_msg = WcfMessage(
+                WcfMessageSeg('file', {'file': file_path, 'file_name': file_path.split('/')[-1]}))
             msg_store[msg_id_seq] = SimpleMsg(
-                msg_id_seq, "file", text, file_path, speaker_uid, None if not self.group_mode else "console_group")
-            final_msg_args['message'] = WcfMessage(
-                WcfMessageSeg('file', {'file': file_path}))
+                msg_id_seq, "file", text, file_msg, speaker_uid, None if not self.group_mode else "console_group")
+            final_msg_args['message'] = file_msg
         elif text.startswith("link:"):
             splited_text = text.split("link:")[1].strip()
             splited_text = splited_text.split("#")
@@ -219,7 +222,7 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
                 WcfMessageSeg.share(title, desc, url, img_path))
             final_msg_args['message'] = link_msg
             msg_store[msg_id_seq] = SimpleMsg(
-                msg_id_seq, "link", text, link_msg[0].data, speaker_uid, None if not self.group_mode else "console_group")
+                msg_id_seq, "link", text, link_msg, speaker_uid, None if not self.group_mode else "console_group")
         elif text.startswith("refer:"):
             # 发送一个引用消息过去，refer后面的就是id
             refer_content = text.split("refer:")[1].strip()
@@ -230,13 +233,14 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
                 return
             refer_msg = splited_refer_content[0]
             refer_text_msg = " ".join(splited_refer_content[1:])
-            msg_store[msg_id_seq] = SimpleMsg(
-                msg_id_seq, "refer", text, refer_msg, speaker_uid, None if not self.group_mode else "console_group")
             if not refer_msg.isdigit() or int(refer_msg) not in msg_store:
                 asyncio.create_task(self._call_api(
                     self.bot, "send_text", text=f"引用消息{refer_msg}不存在", to_wxid=event.get_user_id()))
                 return
-            referd_msg = extract_refer_msg(msg_store[int(refer_msg)], refer_text_msg)
+            referd_msg = extract_refer_msg(
+                msg_store[int(refer_msg)], refer_text_msg)
+            msg_store[msg_id_seq] = SimpleMsg(
+                msg_id_seq, "refer", text, referd_msg, speaker_uid, None if not self.group_mode else "console_group")
             if refer_msg is None:
                 asyncio.create_task(self._call_api(
                     self.bot, "send_text", text=f"引用消息{refer_msg}解析失败，可能是被引用消息的类型未支持", to_wxid=event.get_user_id()))
@@ -244,10 +248,12 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
             final_msg_args['message'] = referd_msg
         else:
             # 发送一个文本消息过去。
-            msg_store[msg_id_seq] = SimpleMsg(msg_id_seq, "text", text, text, speaker_uid, None if not self.group_mode else "console_group")
-            final_msg_args['message'] = WcfMessage(
+            text_msg = WcfMessage(
                 WcfMessageSeg.text(text))
-            
+            msg_store[msg_id_seq] = SimpleMsg(
+                msg_id_seq, "text", text, text_msg, speaker_uid, None if not self.group_mode else "console_group")
+            final_msg_args['message'] = text_msg
+
         if at_users:
             final_msg_args['message'] = final_msg_args['message'] + [WcfMessageSeg.at(
                 user_id) for user_id in at_users]
@@ -312,17 +318,14 @@ class OneBotV11ConsoleAdapter(BaseAdapter):
 
         await self._frontend.call("send_msg", new_data)
 
+
 def extract_refer_msg(refer_msg: SimpleMsg, refer_text_msg: str) -> Optional[WcfMessage]:
-    types = ["text", "image", "voice", "video"]
-    for t in types:
-        if refer_msg.msg_type == t:
-            return WcfMessage(WcfMessageSeg('wx_refer', {
-                'content': refer_text_msg,
-                'refer': {
-                    'id': refer_msg.msg_id,
-                    'type': t,
-                    'speaker_id': refer_msg.speaker_id,
-                    'content': refer_msg.msg
-                }
-            }))
-    return None
+    return WcfMessage(WcfMessageSeg('wx_refer', {
+        'content': refer_text_msg,
+        'refered': {
+            'id': refer_msg.msg_id,
+            'time': refer_msg.time,
+            'sender': refer_msg.speaker_id,
+            'msg': refer_msg.msg
+        }
+    }))
